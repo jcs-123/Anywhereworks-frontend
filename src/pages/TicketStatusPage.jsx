@@ -36,7 +36,7 @@ const TicketStatusPage = () => {
     setError(null);
 
     try {
-      const res = await axios.get('http://localhost:4000/ticketrequest');
+      const res = await axios.get('https://anywhereworks-backend.onrender.com/ticketrequest');
       const data = Array.isArray(res.data?.data)
         ? res.data.data
         : Array.isArray(res.data?.tickets)

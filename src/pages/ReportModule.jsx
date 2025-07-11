@@ -68,7 +68,7 @@ const developers = [
         ...(tab === 'project' && project && { projectName: project }),
       };
 
-      const res = await axios.get('http://localhost:4000/getalldataa', { params });
+      const res = await axios.get('https://anywhereworks-backend.onrender.com/getalldataa', { params });
 
       if (!Array.isArray(res.data?.data)) {
         throw new Error(res.data?.message || 'Invalid response format');

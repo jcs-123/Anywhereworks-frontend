@@ -47,7 +47,7 @@ const CompletedTickets = () => {
   useEffect(() => {
     const fetchTickets = async () => {
       try {
-        const res = await fetch('http://localhost:4000/completed');
+        const res = await fetch('https://anywhereworks-backend.onrender.com/completed');
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         const json = await res.json();
         if (json.success) {
@@ -79,7 +79,7 @@ const CompletedTickets = () => {
 
   const handleVerify = async (ticketId) => {
     try {
-      const res = await fetch(`http://localhost:4000/tickets/${ticketId}/verify`, {
+      const res = await fetch(`https://anywhereworks-backend.onrender.com/tickets/${ticketId}/verify`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
       });

@@ -76,7 +76,7 @@ useEffect(() => {
       
       // Safely normalize the email
       const currentUserEmail = String(userEmail).toLowerCase().trim();
-      const res = await axios.get('http://localhost:4000/getdashboardata');
+      const res = await axios.get('https://anywhereworks-backend.onrender.com/getdashboardata');
       
       // Filter tickets - only show those assigned to current user's email
       let tickets = res.data.tickets || [];

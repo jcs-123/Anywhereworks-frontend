@@ -65,7 +65,7 @@ function Assigntickent() {
         if (value) data.append(key, value);
       });
 
-      await axios.post('http://localhost:4000/assign', data, {
+      await axios.post('https://anywhereworks-backend.onrender.com/assign', data, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
