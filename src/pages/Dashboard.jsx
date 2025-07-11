@@ -60,7 +60,6 @@ const Dashboard = () => {
 useEffect(() => {
   const fetchDashboardData = async () => {
     try {
-      setLoading(true);
       
       // First verify we have valid user data
       const user = JSON.parse(localStorage.getItem('user'));
@@ -98,7 +97,6 @@ useEffect(() => {
       setError(err.message || "Failed to load dashboard data");
       setAllTickets([]);
     } finally {
-      setLoading(false);
     }
   };
 
