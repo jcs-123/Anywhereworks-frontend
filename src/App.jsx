@@ -26,9 +26,9 @@ function App() {
    
     <Routes>
       {/* Root Redirect */}
-      <Route
+         <Route
         path="/"
-        element={<Navigate to={isLoggedIn ? "/dashboard" : "/login"} />}
+        element={<Navigate to="/login" />}
       />
 
       {/* Login Route */}

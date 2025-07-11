@@ -17,7 +17,6 @@ const Dashboard = () => {
   const [filteredTickets, setFilteredTickets] = useState([]);
   const [devStats, setDevStats] = useState({});
   const [maintStats, setMaintStats] = useState({});
-  const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [filterType, setFilterType] = useState('All');
   const [timeRange, setTimeRange] = useState('all');
@@ -223,13 +222,7 @@ useEffect(() => {
     </Pagination>
   );
 
-  if (loading) {
-    return (
-      <div className="d-flex justify-content-center align-items-center min-vh-100">
-        <Spinner animation="border" variant="primary" />
-      </div>
-    );
-  }
+
 
   if (!user) {
     return (
