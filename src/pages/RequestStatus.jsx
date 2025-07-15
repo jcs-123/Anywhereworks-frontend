@@ -23,7 +23,7 @@ function RequestStatus() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await axios.get('https://anywhereworks-backend.onrender.com/ticketrequest');
+        const res = await axios.get('http://localhost:4000/ticketrequest');
         const onlyRequested = res.data.data
           .filter(item => item.timeRequests?.length > 0)
           .map(item => {
@@ -65,7 +65,7 @@ function RequestStatus() {
   const updateStatus = async (id, status) => {
     const note = responseNotes[id] || '';
     try {
-      await axios.post('https://anywhereworks-backend.onrender.com/ticketrequest/update-status', {
+      await axios.post('http://localhost:4000/ticketrequest/update-status', {
         ticketId: id,
         status,
         responseNote: note

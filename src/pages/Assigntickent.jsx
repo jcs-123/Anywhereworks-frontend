@@ -6,6 +6,7 @@ import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
+import { Modal, Button } from 'react-bootstrap';
 
 function Assigntickent() {
   const [formData, setFormData] = useState({
@@ -22,12 +23,25 @@ function Assigntickent() {
 
   const [loading, setLoading] = useState(false);
 
+  // const assigneeOptions = [
+  //   { name: 'Jeswin', gmail: 'jeswinjohn@gmail.com' },
+  //   { name: 'Anu Mathew', gmail: 'anu@example.com' },
+  //   { name: 'Arun K', gmail: 'arun@example.com' },
+  //   { name: 'Neha Joseph', gmail: 'neha@example.com' },
+  // ];
   const assigneeOptions = [
-    { name: 'Jeswin', gmail: 'jeswinjohn03@gmail.com' },
-    { name: 'Anu Mathew', gmail: 'anu@example.com' },
-    { name: 'Arun K', gmail: 'arun@example.com' },
-    { name: 'Neha Joseph', gmail: 'neha@example.com' },
-  ];
+  { name: 'Merin', gmail: 'merinjdominic@jecc.ac.in' },
+  { name: 'Sandra', gmail: 'sandraps@jecc.ac.in' },
+  { name: 'Deepthi', gmail: 'deepthimohan@jecc.ac.in' },
+  { name: 'Abin', gmail: 'abinjose@jecc.ac.in' },
+  { name: 'Jeswin', gmail: 'jeswinjohn@jecc.ac.in' },
+  { name: 'Pravitha', gmail: 'pravithacp@jecc.ac.in' },
+  { name: 'Hima', gmail: 'himappradeep@jecc.ac.in' },
+];
+
+const [showModal, setShowModal] = useState(false);
+const [newProjectName, setNewProjectName] = useState('');
+const [projectList, setProjectList] = useState([]);
 
   useEffect(() => {
     const userStr = localStorage.getItem('user');
@@ -43,6 +57,26 @@ function Assigntickent() {
       console.error('Invalid JSON in localStorage:', error);
     }
   }, []);
+useEffect(() => {
+  axios.get('http://localhost:4000/all')
+    .then(res => setProjectList(res.data))
+    .catch(err => console.error('Failed to fetch projects', err));
+}, []);
+const handleAddProject = async () => {
+  if (!newProjectName.trim()) return;
+
+  try {
+    const res = await axios.post('http://localhost:4000/add', { projectName: newProjectName });
+    toast.success('✅ Project added');
+    setProjectList(prev => [...prev, res.data.project]); // push new project
+    setFormData(prev => ({ ...prev, projectName: newProjectName })); // set as selected
+    setShowModal(false);
+    setNewProjectName('');
+  } catch (error) {
+    toast.error('❌ Failed to add project');
+    console.error(error);
+  }
+};
 
   const handleChange = (e) => {
     const { name, value, files } = e.target;
@@ -65,7 +99,7 @@ function Assigntickent() {
         if (value) data.append(key, value);
       });
 
-      await axios.post('https://anywhereworks-backend.onrender.com/assign', data, {
+      await axios.post('http://localhost:4000/assign', data, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
@@ -114,23 +148,39 @@ function Assigntickent() {
 
                       <Form onSubmit={handleSubmit}>
                         {[
-                          {
-                            id: 'projectName',
-                            label: 'Project Name',
-                            control: (
-                              <Form.Select
-                                name="projectName"
-                                value={formData.projectName}
-                                onChange={handleChange}
-                                required
-                              >
-                                <option value="">Select</option>
-                                <option value="Catechism">Catechism</option>
-                                <option value="Website">Website</option>
-                                <option value="CRM">CRM</option>
-                              </Form.Select>
-                            ),
-                          },
+                       {
+  id: 'projectName',
+  label: 'Project Name',
+  control: (
+    <Row className="g-2">
+      <Col xs={12} md={8}>
+        <Form.Select
+          name="projectName"
+          value={formData.projectName}
+          onChange={handleChange}
+          required
+        >
+          <option value="">Select</option>
+          {projectList.map((proj, i) => (
+            <option key={i} value={proj.projectName}>
+              {proj.projectName}
+            </option>
+          ))}
+        </Form.Select>
+      </Col>
+      <Col xs={12} md={4}>
+        <Button
+          variant="outline-primary"
+          onClick={() => setShowModal(true)}
+          className="w-100"
+        >
+          + Add Project
+        </Button>
+      </Col>
+    </Row>
+  ),
+}
+,
                           {
                             id: 'ticketType',
                             label: 'Ticket Type',
@@ -245,6 +295,31 @@ function Assigntickent() {
                 </motion.div>
               </Col>
             </Row>
+            <Modal show={showModal} onHide={() => setShowModal(false)} centered>
+  <Modal.Header closeButton>
+    <Modal.Title>Add New Project</Modal.Title>
+  </Modal.Header>
+  <Modal.Body>
+    <Form.Group>
+      <Form.Label>Project Name</Form.Label>
+      <Form.Control
+        type="text"
+        value={newProjectName}
+        onChange={(e) => setNewProjectName(e.target.value)}
+        placeholder="Enter project name"
+      />
+    </Form.Group>
+  </Modal.Body>
+  <Modal.Footer>
+    <Button variant="secondary" onClick={() => setShowModal(false)}>
+      Cancel
+    </Button>
+    <Button variant="primary" onClick={handleAddProject}>
+      Add
+    </Button>
+  </Modal.Footer>
+</Modal>
+
           </Container>
         </main>
       </div>

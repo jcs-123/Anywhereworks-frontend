@@ -10,7 +10,7 @@ function TimeRequestModal({ show, onHide, ticket, userId, toast }) {
 
   const handleSubmit = async () => {
     try {
-      await axios.post(`https://anywhereworks-backend.onrender.com/tickets/${ticket._id}/request-time`, {
+      await axios.post(`http://localhost:4000/tickets/${ticket._id}/request-time`, {
         hours: timeRequestData.hours,
         reason: timeRequestData.reason,
         requestedBy: userId

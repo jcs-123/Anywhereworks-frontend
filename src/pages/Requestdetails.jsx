@@ -33,7 +33,7 @@ function Requestdetails() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await axios.get('https://anywhereworks-backend.onrender.com/ticketrequest');
+      const response = await axios.get('http://localhost:4000/ticketrequest');
 
       const rawData = response.data?.data || [];
 

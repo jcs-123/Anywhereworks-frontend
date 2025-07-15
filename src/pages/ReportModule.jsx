@@ -25,11 +25,20 @@ const ReportModule = () => {
   const [reportData, setReportData] = useState([]);
   const [error, setError] = useState(null);
 
+// const developers = [
+//   { name: 'Jeswin', gmail: 'jeswinjohn03@gmail.com' },
+//   { name: 'Anu Mathew', gmail: 'anu@example.com' },
+//   { name: 'Arun K', gmail: 'arun@example.com' },
+//   { name: 'Neha Joseph', gmail: 'neha@example.com' }
+// ];
 const developers = [
-  { name: 'Jeswin', gmail: 'jeswinjohn03@gmail.com' },
-  { name: 'Anu Mathew', gmail: 'anu@example.com' },
-  { name: 'Arun K', gmail: 'arun@example.com' },
-  { name: 'Neha Joseph', gmail: 'neha@example.com' }
+  { name: 'Merin', gmail: 'merinjdominic@jecc.ac.in' },
+  { name: 'Sandra', gmail: 'sandraps@jecc.ac.in' },
+  { name: 'Deepthi', gmail: 'deepthimohan@jecc.ac.in' },
+  { name: 'Abin', gmail: 'abinjose@jecc.ac.in' },
+  { name: 'Jeswin', gmail: 'jeswinjohn@jecc.ac.in' },
+  { name: 'Pravitha', gmail: 'pravithacp@jecc.ac.in' },
+  { name: 'Hima', gmail: 'himappradeep@jecc.ac.in' }
 ];
 
   const projects = ['CRM', 'Catechism', 'Website'];
@@ -68,7 +77,7 @@ const developers = [
         ...(tab === 'project' && project && { projectName: project }),
       };
 
-      const res = await axios.get('https://anywhereworks-backend.onrender.com/getalldataa', { params });
+      const res = await axios.get('http://localhost:4000/getalldataa', { params });
 
       if (!Array.isArray(res.data?.data)) {
         throw new Error(res.data?.message || 'Invalid response format');
