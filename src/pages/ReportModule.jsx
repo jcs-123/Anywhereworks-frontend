@@ -41,7 +41,18 @@ const developers = [
   { name: 'Hima', gmail: 'himappradeep@jecc.ac.in' }
 ];
 
-  const projects = ['CRM', 'Catechism', 'Website'];
+const [projects, setProjects] = useState([]);
+useEffect(() => {
+  axios.get('https://anywhereworks-backend.onrender.com/all')
+    .then((res) => {
+      if (Array.isArray(res.data)) {
+        setProjects(res.data.map((proj) => proj.projectName));
+      }
+    })
+    .catch((err) => {
+      console.error('Failed to fetch project list:', err);
+    });
+}, []);
 
   const reportHeaders = [
     '#', 'Ticket No', 'Subject', 'Project', 'Status',
@@ -77,7 +88,7 @@ const developers = [
         ...(tab === 'project' && project && { projectName: project }),
       };
 
-      const res = await axios.get('http://localhost:4000/getalldataa', { params });
+      const res = await axios.get('https://anywhereworks-backend.onrender.com/getalldataa', { params });
 
       if (!Array.isArray(res.data?.data)) {
         throw new Error(res.data?.message || 'Invalid response format');
@@ -342,21 +353,22 @@ const exportToPDF = () => {
                           <Form.Select value={developer} onChange={(e) => setDeveloper(e.target.value)}>
                             <option value="">All Developers</option>
                             {developers.map((d) => (
-                              <option key={d.email} value={d.name}>{d.name}</option>
+                              <option key={d.gmail} value={d.name}>{d.name}</option>
                             ))}
                           </Form.Select>
                         </Col>
                       )}
 
-                      {tab === 'project' && (
-                        <Col md={3}>
-                          <Form.Label>Project</Form.Label>
-                          <Form.Select value={project} onChange={(e) => setProject(e.target.value)}>
-                            <option value="">All Projects</option>
-                            {projects.map((p) => <option key={p} value={p}>{p}</option>)}
-                          </Form.Select>
-                        </Col>
-                      )}
+                   {tab === 'project' && (
+  <Col md={3}>
+    <Form.Label>Project</Form.Label>
+    <Form.Select value={project} onChange={(e) => setProject(e.target.value)}>
+      <option value="">All Projects</option>
+      {projects.map((p) => <option key={p} value={p}>{p}</option>)}
+    </Form.Select>
+  </Col>
+)}
+
 
                       <Col md="auto">
                         <Button onClick={fetchReport} className="fw-bold px-4">

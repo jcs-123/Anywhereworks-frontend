@@ -58,7 +58,7 @@ const [projectList, setProjectList] = useState([]);
     }
   }, []);
 useEffect(() => {
-  axios.get('http://localhost:4000/all')
+  axios.get('https://anywhereworks-backend.onrender.com/all')
     .then(res => setProjectList(res.data))
     .catch(err => console.error('Failed to fetch projects', err));
 }, []);
@@ -66,7 +66,7 @@ const handleAddProject = async () => {
   if (!newProjectName.trim()) return;
 
   try {
-    const res = await axios.post('http://localhost:4000/add', { projectName: newProjectName });
+    const res = await axios.post('https://anywhereworks-backend.onrender.com/add', { projectName: newProjectName });
     toast.success('✅ Project added');
     setProjectList(prev => [...prev, res.data.project]); // push new project
     setFormData(prev => ({ ...prev, projectName: newProjectName })); // set as selected
@@ -99,7 +99,7 @@ const handleAddProject = async () => {
         if (value) data.append(key, value);
       });
 
-      await axios.post('http://localhost:4000/assign', data, {
+      await axios.post('https://anywhereworks-backend.onrender.com/assign', data, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 

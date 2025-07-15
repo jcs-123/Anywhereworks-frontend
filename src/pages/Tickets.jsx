@@ -30,7 +30,7 @@ const [ticketTypeFilter, setTicketTypeFilter] = useState('All');
   useEffect(() => {
     const fetchTickets = async () => {
       try {
-        const response = await axios.get('http://localhost:4000/tickets');
+        const response = await axios.get('https://anywhereworks-backend.onrender.com/tickets');
         setTickets(response.data.tickets || []);
       } catch (error) {
         toast.error('❌ Error fetching tickets');
@@ -102,7 +102,7 @@ const notCompletedCount = tickets.filter(
     
     try {
       setFileLoading(true);
-      const fileUrl = `http://localhost:4000/uploads/${filename}`;
+      const fileUrl = `https://anywhereworks-backend.onrender.com/uploads/${filename}`;
       
       // Check if the file exists
       const response = await fetch(fileUrl, { method: 'HEAD' });
@@ -127,7 +127,7 @@ const notCompletedCount = tickets.filter(
     
     try {
       setFileLoading(true);
-      const fileUrl = `http://localhost:4000/uploads/${filename}`;
+      const fileUrl = `https://anywhereworks-backend.onrender.com/uploads/${filename}`;
       
       // Check if the file exists
       const response = await fetch(fileUrl, { method: 'HEAD' });
@@ -225,7 +225,7 @@ const notCompletedCount = tickets.filter(
 
   const handleSaveStatus = async () => {
     try {
-      const response = await axios.put(`http://localhost:4000/tickets/${selectedTicket._id}`, {
+      const response = await axios.put(`https://anywhereworks-backend.onrender.com/tickets/${selectedTicket._id}`, {
         status: selectedTicket.status,
       });
 

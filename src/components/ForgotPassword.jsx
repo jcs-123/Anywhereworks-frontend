@@ -24,7 +24,7 @@ const ForgotPassword = () => {
     if (!trimmedEmail) return toast.error('Please enter your email');
     setLoading(true);
     try {
-      const res = await axios.post('http://localhost:4000/forgot-password', {
+      const res = await axios.post('https://anywhereworks-backend.onrender.com/forgot-password', {
         gmail: trimmedEmail,
       });
       toast.success(res.data.message || 'OTP sent to your email!');
@@ -42,7 +42,7 @@ const ForgotPassword = () => {
     if (!otp) return toast.error('Please enter OTP');
     setLoading(true);
     try {
-      const res = await axios.post('http://localhost:4000/verify-otp', {
+      const res = await axios.post('https://anywhereworks-backend.onrender.com/verify-otp', {
         gmail: trimmedEmail,
         otp,
       });
@@ -70,7 +70,7 @@ const handleResetPassword = async (e) => {
   setLoading(true);
 
   try {
-    const res = await axios.post('http://localhost:4000/reset-password', {
+    const res = await axios.post('https://anywhereworks-backend.onrender.com/reset-password', {
       gmail: trimmedEmail,
       newPassword: trimmedPassword,
     });
