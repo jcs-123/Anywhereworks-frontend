@@ -42,11 +42,10 @@ const [ticketTypeFilter, setTicketTypeFilter] = useState('All');
     fetchTickets();
   }, []);
 
-  // Filter out verified tickets and apply search
-  const filteredTickets = tickets
+const filteredTickets = tickets
   .filter(ticket =>
     ticket.assignedTo?.toLowerCase().includes(userName.toLowerCase()) &&
-    ticket.status !== 'Verified' &&
+    !['Verified', 'Completed'].includes(ticket.status) &&
     (ticketTypeFilter === 'All' || ticket.ticketType === ticketTypeFilter)
   )
   .filter(ticket => {
@@ -59,10 +58,13 @@ const [ticketTypeFilter, setTicketTypeFilter] = useState('All');
       String(ticket.expectedHours || ''),
       new Date(ticket.createdAt).toLocaleDateString('en-IN'),
       ticket.ticketType || '',
-    ]
-      .join(' ')
-      .toLowerCase();
+    ].join(' ').toLowerCase();
     return fields.includes(searchTerm.toLowerCase());
+  })
+  .sort((a, b) => {
+    const aId = String(a.ticketNumber || a.ticketNo || '');
+    const bId = String(b.ticketNumber || b.ticketNo || '');
+    return aId.localeCompare(bId, undefined, { numeric: true });
   });
 
     // Count of non-completed tickets (excluding Verified and Completed)
@@ -248,7 +250,7 @@ const notCompletedCount = tickets.filter(
   return (
     <div>
       <Header />
-      <ToastContainer position="top-right" autoClose={3000} />
+      <ToastContainer position="top-right" autoClose={1500} />
       <div className="d-flex min-vh-100">
 <Sidebar notCompletedCount={notCompletedCount} />
         <main className="flex-grow-1 p-4 bg-light">

@@ -27,45 +27,62 @@ const TicketStatusPage = () => {
   const [error, setError] = useState(null);
   const rowsPerPage = 6;
 
+
+// ✅ Get logged-in user info
+ const user = JSON.parse(localStorage.getItem('user'));
+  const userEmail = user?.gmail?.toLowerCase(); // use 'gmail' as key
+  const userName = user?.name || 'User';
+  const userRole = user?.role || 'employee';
   useEffect(() => {
     fetchTickets();
   }, []);
 
-  const fetchTickets = async () => {
-    setLoading(true);
-    setError(null);
+ const fetchTickets = async () => {
+  setLoading(true);
+  setError(null);
 
-    try {
-      const res = await axios.get('https://anywhereworks-backend.onrender.com/ticketrequest');
-      const data = Array.isArray(res.data?.data)
-        ? res.data.data
-        : Array.isArray(res.data?.tickets)
-        ? res.data.tickets
-        : Array.isArray(res.data)
-        ? res.data
-        : [];
+  try {
+    const res = await axios.get('https://anywhereworks-backend.onrender.com/ticketrequest');
 
-      const filtered = data
-        .filter(ticket => {
-          const status = ticket.status?.toLowerCase();
-          return status === 'completed' || status === 'verified';
-        })
-        .map(ticket => ({
-          ...ticket,
-          latestRequest: Array.isArray(ticket.timeRequests)
-            ? ticket.timeRequests[ticket.timeRequests.length - 1] || null
-            : null,
-        }));
+    const data = Array.isArray(res.data?.data)
+      ? res.data.data
+      : Array.isArray(res.data?.tickets)
+      ? res.data.tickets
+      : Array.isArray(res.data)
+      ? res.data
+      : [];
 
-      setTickets(filtered);
-      setFilteredTickets(filtered);
-    } catch (err) {
-      console.error('Fetch error:', err);
-      setError('Failed to load tickets. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
+    const filtered = data
+      .filter(ticket => {
+        const status = ticket.status?.toLowerCase();
+        const assignedTo = ticket.assignedTo?.toLowerCase() || '';
+        return (
+          (status === 'completed' || status === 'verified') &&
+          assignedTo === userEmail?.toLowerCase()
+        );
+      })
+      .map(ticket => ({
+        ...ticket,
+        latestRequest: Array.isArray(ticket.timeRequests)
+          ? ticket.timeRequests[ticket.timeRequests.length - 1] || null
+          : null,
+      }))
+      .sort((a, b) => {
+        const aNo = parseInt(a.ticketNo || 0, 10);
+        const bNo = parseInt(b.ticketNo || 0, 10);
+        return aNo - bNo; // ascending
+      });
+
+    setTickets(filtered);
+    setFilteredTickets(filtered);
+  } catch (err) {
+    console.error('Fetch error:', err);
+    setError('Failed to load tickets. Please try again.');
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const handleSearch = (e) => {
     const value = e.target.value.toLowerCase();

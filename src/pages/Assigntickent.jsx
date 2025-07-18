@@ -148,7 +148,7 @@ const handleAddProject = async () => {
 
                       <Form onSubmit={handleSubmit}>
                         {[
-                       {
+        {
   id: 'projectName',
   label: 'Project Name',
   control: (
@@ -161,11 +161,15 @@ const handleAddProject = async () => {
           required
         >
           <option value="">Select</option>
-          {projectList.map((proj, i) => (
-            <option key={i} value={proj.projectName}>
-              {proj.projectName}
-            </option>
-          ))}
+          {[...projectList]
+            .sort((a, b) =>
+              a.projectName.localeCompare(b.projectName)
+            )
+            .map((proj, i) => (
+              <option key={i} value={proj.projectName}>
+                {proj.projectName}
+              </option>
+            ))}
         </Form.Select>
       </Col>
       <Col xs={12} md={4}>
@@ -180,6 +184,7 @@ const handleAddProject = async () => {
     </Row>
   ),
 }
+
 ,
                           {
                             id: 'ticketType',

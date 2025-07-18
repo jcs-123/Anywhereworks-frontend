@@ -44,38 +44,49 @@ const CompletedTickets = () => {
     return 'old';
   };
 
-  useEffect(() => {
-    const fetchTickets = async () => {
-      try {
-        const res = await fetch('https://anywhereworks-backend.onrender.com/completed');
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-        const json = await res.json();
-        if (json.success) {
-          const processedTickets = json.data.map(ticket => ({
-            ...ticket,
-            formattedTime: formatTime(ticket.completedTime),
-            timeStatus: getTimeStatus(ticket.completedTime),
-            projectName: ticket.projectName || 'N/A',
-            ticketNo: ticket.ticketNo || ticket.ticket_id || 'N/A',
-            subject: ticket.subject || 'No subject',
-            expectedHours: ticket.expectedHours || 0,
-            hours: ticket.hours || ticket.requestedHours || 0,
-            reason: ticket.reason || ticket.responseNote || 'No reason provided'
-          }));
-          setTickets(processedTickets);
-          setFilteredTickets(processedTickets);
-        } else {
-          toast.error(json.message || 'Failed to fetch tickets');
-        }
-      } catch (error) {
-        console.error('Error fetching completed tickets:', error);
-        toast.error(error.message || 'Server Error');
-      } finally {
-        setLoading(false);
+useEffect(() => {
+  const fetchTickets = async () => {
+    try {
+      const res = await fetch('https://anywhereworks-backend.onrender.com/completed');
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+      const json = await res.json();
+
+      if (json.success) {
+        const processedTickets = json.data.map(ticket => ({
+          ...ticket,
+          formattedTime: formatTime(ticket.completedTime),
+          timeStatus: getTimeStatus(ticket.completedTime),
+          projectName: ticket.projectName || 'N/A',
+          ticketNo: ticket.ticketNo || ticket.ticket_id || 'N/A',
+          subject: ticket.subject || 'No subject',
+          expectedHours: ticket.expectedHours || 0,
+          hours: ticket.hours || ticket.requestedHours || 0,
+          reason: ticket.reason || ticket.responseNote || 'No reason provided'
+        }));
+
+        // ✅ Sort: Unverified first, then Verified
+        const sortedTickets = processedTickets.sort((a, b) => {
+          if (a.status === 'Verified' && b.status !== 'Verified') return 1;
+          if (a.status !== 'Verified' && b.status === 'Verified') return -1;
+          return 0;
+        });
+
+        setTickets(sortedTickets);
+        setFilteredTickets(sortedTickets);
+      } else {
+        toast.error(json.message || 'Failed to fetch tickets');
       }
-    };
-    fetchTickets();
-  }, []);
+    } catch (error) {
+      console.error('Error fetching completed tickets:', error);
+      toast.error(error.message || 'Server Error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchTickets();
+}, []);
+
 
   const handleVerify = async (ticketId) => {
     try {

@@ -362,10 +362,17 @@ const exportToPDF = () => {
                    {tab === 'project' && (
   <Col md={3}>
     <Form.Label>Project</Form.Label>
-    <Form.Select value={project} onChange={(e) => setProject(e.target.value)}>
-      <option value="">All Projects</option>
-      {projects.map((p) => <option key={p} value={p}>{p}</option>)}
-    </Form.Select>
+   <Form.Select value={project} onChange={(e) => setProject(e.target.value)}>
+  <option value="">All Projects</option>
+  {[...projects]
+    .sort((a, b) => a.localeCompare(b))
+    .map((p) => (
+      <option key={p} value={p}>
+        {p}
+      </option>
+    ))}
+</Form.Select>
+
   </Col>
 )}
 
