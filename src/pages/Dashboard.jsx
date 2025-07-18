@@ -102,32 +102,33 @@ useEffect(() => {
   fetchDashboardData();
 }, [userRole]);
 // Only depend on userRole since we get email fresh each time
-  useEffect(() => {
-    let filtered = [...allTickets];
-    
-    // Filter by ticket type
-    if (filterType !== 'All') {
-      filtered = filtered.filter(t => t.ticketType === filterType);
-    }
-    
-    // Filter by time range
-    const now = new Date();
-    if (timeRange === 'week') {
-      const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      filtered = filtered.filter(t => new Date(t.createdAt) > oneWeekAgo);
-    } else if (timeRange === 'month') {
-      const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      filtered = filtered.filter(t => new Date(t.createdAt) > oneMonthAgo);
-    }
-    
-    // Filter by ticket type (additional filter)
-    if (ticketTypeFilter !== 'All') {
-      filtered = filtered.filter(t => t.ticketType === ticketTypeFilter);
-    }
-    
-    setFilteredTickets(filtered);
-    setCurrentPage(1);
-  }, [filterType, allTickets, timeRange, ticketTypeFilter]);
+useEffect(() => {
+  let filtered = [...allTickets];
+
+  // ✅ Filter by ticket status
+  if (filterType !== 'All') {
+    filtered = filtered.filter(t => t.status === filterType);
+  }
+
+  // ✅ Filter by time range
+  const now = new Date();
+  if (timeRange === 'week') {
+    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    filtered = filtered.filter(t => new Date(t.createdAt) > oneWeekAgo);
+  } else if (timeRange === 'month') {
+    const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    filtered = filtered.filter(t => new Date(t.createdAt) > oneMonthAgo);
+  }
+
+  // ✅ Filter by ticket type
+  if (ticketTypeFilter !== 'All') {
+    filtered = filtered.filter(t => t.ticketType === ticketTypeFilter);
+  }
+
+  // ✅ Set state
+  setFilteredTickets(filtered);
+  setCurrentPage(1);
+}, [filterType, allTickets, timeRange, ticketTypeFilter]);
 
   // Calculate working days (6 hours = 1 day)
   const calculateWorkingDays = (expectedHours = 0, requestedHours = 0) => {
@@ -204,23 +205,41 @@ useEffect(() => {
     return <Badge bg={colors[status] || 'secondary'}>{status}</Badge>;
   };
 
-  const renderPagination = () => (
+const renderPagination = () => {
+  const pageNumbers = [];
+  const maxButtons = 5;
+  const half = Math.floor(maxButtons / 2);
+  let start = Math.max(currentPage - half, 1);
+  let end = Math.min(start + maxButtons - 1, totalPages);
+
+  // Adjust start if near the end
+  if (end - start < maxButtons - 1) {
+    start = Math.max(end - maxButtons + 1, 1);
+  }
+
+  for (let i = start; i <= end; i++) {
+    pageNumbers.push(
+      <Pagination.Item
+        key={i}
+        active={i === currentPage}
+        onClick={() => setCurrentPage(i)}
+      >
+        {i}
+      </Pagination.Item>
+    );
+  }
+
+  return (
     <Pagination className="justify-content-end mt-3">
       <Pagination.First onClick={() => setCurrentPage(1)} disabled={currentPage === 1} />
-      <Pagination.Prev onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} />
-      {[...Array(totalPages)].map((_, i) => (
-        <Pagination.Item
-          key={i}
-          active={i + 1 === currentPage}
-          onClick={() => setCurrentPage(i + 1)}
-        >
-          {i + 1}
-        </Pagination.Item>
-      ))}
-      <Pagination.Next onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} />
+      <Pagination.Prev onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1} />
+      {pageNumbers}
+      <Pagination.Next onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages} />
       <Pagination.Last onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages} />
     </Pagination>
   );
+};
+
 
 
 
