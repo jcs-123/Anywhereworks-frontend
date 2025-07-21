@@ -2,9 +2,11 @@ import React, { useEffect, useState } from 'react';
 import {
   Container,
   Button,
-  ButtonGroup,
   Spinner,
   Badge,
+  Form,
+  Row,
+  Col,
 } from 'react-bootstrap';
 import { motion } from 'framer-motion';
 import DataTable from 'react-data-table-component';
@@ -16,16 +18,27 @@ import 'react-toastify/dist/ReactToastify.css';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
 
+const assigneeOptions = [
+  { name: 'Merin', gmail: 'merinjdominic@jecc.ac.in' },
+  { name: 'Sandra', gmail: 'sandraps@jecc.ac.in' },
+  { name: 'Deepthi', gmail: 'deepthimohan@jecc.ac.in' },
+  { name: 'Abin', gmail: 'abinjose@jecc.ac.in' },
+  { name: 'Jeswin', gmail: 'jeswinjohn@jecc.ac.in' },
+  { name: 'Pravitha', gmail: 'pravithacp@jecc.ac.in' },
+  { name: 'Hima', gmail: 'himappradeep@jecc.ac.in' },
+];
+
 const CompletedTickets = () => {
   const [tickets, setTickets] = useState([]);
+  const [filteredTickets, setFilteredTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState('');
-  const [filteredTickets, setFilteredTickets] = useState([]);
+  const [selectedAssignee, setSelectedAssignee] = useState('');
 
   const formatTime = (dateString) => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
-    return date.toLocaleString('en-US', {
+    return date.toLocaleString('en-IN', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -44,11 +57,10 @@ const CompletedTickets = () => {
     return 'old';
   };
 
-useEffect(() => {
   const fetchTickets = async () => {
     try {
+      setLoading(true);
       const res = await fetch('https://anywhereworks-backend.onrender.com/completed');
-      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
       const json = await res.json();
 
       if (json.success) {
@@ -64,29 +76,45 @@ useEffect(() => {
           reason: ticket.reason || ticket.responseNote || 'No reason provided'
         }));
 
-        // ✅ Sort: Unverified first, then Verified
-        const sortedTickets = processedTickets.sort((a, b) => {
-          if (a.status === 'Verified' && b.status !== 'Verified') return 1;
-          if (a.status !== 'Verified' && b.status === 'Verified') return -1;
-          return 0;
-        });
+        const sorted = processedTickets.sort((a, b) =>
+          a.status === 'Verified' ? 1 : -1
+        );
 
-        setTickets(sortedTickets);
-        setFilteredTickets(sortedTickets);
+        setTickets(sorted);
+        setFilteredTickets(sorted);
       } else {
         toast.error(json.message || 'Failed to fetch tickets');
       }
     } catch (error) {
-      console.error('Error fetching completed tickets:', error);
       toast.error(error.message || 'Server Error');
     } finally {
       setLoading(false);
     }
   };
 
-  fetchTickets();
-}, []);
+  useEffect(() => {
+    fetchTickets();
+  }, []);
 
+  useEffect(() => {
+    let filtered = [...tickets];
+    if (selectedAssignee) {
+      filtered = filtered.filter(t => t.assignedTo === selectedAssignee);
+    }
+
+    if (searchText) {
+      const query = searchText.toLowerCase();
+      filtered = filtered.filter(t =>
+        t.projectName.toLowerCase().includes(query) ||
+        t.subject.toLowerCase().includes(query) ||
+        t.reason.toLowerCase().includes(query) ||
+        t.ticketNo.toString().includes(query) ||
+        t.status.toLowerCase().includes(query)
+      );
+    }
+
+    setFilteredTickets(filtered);
+  }, [searchText, selectedAssignee, tickets]);
 
   const handleVerify = async (ticketId) => {
     try {
@@ -95,27 +123,26 @@ useEffect(() => {
         headers: { 'Content-Type': 'application/json' },
       });
 
-      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
       const result = await res.json();
-
       if (result.success) {
-        setFilteredTickets(prev => prev.map(t => t._id === ticketId ? { ...t, status: 'Verified' } : t));
-        setTickets(prev => prev.map(t => t._id === ticketId ? { ...t, status: 'Verified' } : t));
-        const verifiedTicket = tickets.find(t => t._id === ticketId);
-        toast.success(`Ticket ${verifiedTicket?.ticketNo || ticketId} verified successfully`);
+        const updateStatus = (arr) =>
+          arr.map(t => t._id === ticketId ? { ...t, status: 'Verified' } : t);
+
+        setTickets(updateStatus);
+        setFilteredTickets(updateStatus);
+        toast.success(`Ticket ${ticketId} verified successfully`);
       } else {
         toast.error(result.message || 'Verification failed');
       }
     } catch (err) {
-      console.error('Verification error:', err);
-      toast.error(err.message || 'Server error during verification');
+      toast.error(err.message || 'Verification error');
     }
   };
 
   const exportToExcel = () => {
     try {
-      const data = filteredTickets.map((item, idx) => ({
-        'S.No': idx + 1,
+      const data = filteredTickets.map((item, i) => ({
+        'S.No': i + 1,
         'Project': item.projectName,
         'Ticket ID': item.ticketNo,
         'Completed Time': item.formattedTime,
@@ -129,9 +156,8 @@ useEffect(() => {
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Completed Tickets');
       XLSX.writeFile(wb, 'completed_tickets.xlsx');
-    } catch (error) {
-      console.error('Export to Excel error:', error);
-      toast.error('Failed to export to Excel');
+    } catch (err) {
+      toast.error('Excel export failed');
     }
   };
 
@@ -142,8 +168,8 @@ useEffect(() => {
       doc.text('Completed Ticket Report', 105, 15, { align: 'center' });
       autoTable(doc, {
         head: [['#', 'Project', 'Ticket ID', 'Completed Time', 'Subject', 'Exp. Hrs', 'Req. Hrs', 'Reason', 'Status']],
-        body: filteredTickets.map((item, idx) => [
-          idx + 1,
+        body: filteredTickets.map((item, i) => [
+          i + 1,
           item.projectName,
           item.ticketNo,
           item.formattedTime,
@@ -155,26 +181,12 @@ useEffect(() => {
         ]),
         startY: 25,
         styles: { fontSize: 8 },
-        headStyles: { fillColor: [41, 128, 185] },
+        headStyles: { fillColor: [22, 160, 133] },
       });
       doc.save('completed_tickets.pdf');
-    } catch (error) {
-      console.error('Export to PDF error:', error);
-      toast.error('Failed to export to PDF');
+    } catch (err) {
+      toast.error('PDF export failed');
     }
-  };
-
-  const handleSearch = (e) => {
-    const value = e.target.value.toLowerCase();
-    setSearchText(value);
-    const filtered = tickets.filter((t) =>
-      t.projectName?.toLowerCase().includes(value) ||
-      t.subject?.toLowerCase().includes(value) ||
-      t.reason?.toLowerCase().includes(value) ||
-      t.ticketNo?.toString().includes(value) ||
-      t.status?.toLowerCase().includes(value)
-    );
-    setFilteredTickets(filtered);
   };
 
   const columns = [
@@ -187,64 +199,83 @@ useEffect(() => {
     { name: 'Extra Hours', selector: row => row.approvedExtraHours || 0 },
     {
       name: 'Extension Reason',
-      selector: row => row.approvedTimeRequests?.map((req, i) =>
-        `${i + 1}. ${req.reason} (${req.hours} hrs)`
-      ).join('\n') || 'N/A',
+      selector: row =>
+        row.approvedTimeRequests?.map((r, i) =>
+          `${i + 1}. ${r.reason} (${r.hours}h)`
+        ).join('; ') || 'N/A',
       wrap: true,
-      grow: 2
+      grow: 2,
     },
     {
       name: 'Status',
-      cell: (row) =>
+      cell: row =>
         row.status === 'Verified' ? (
-          <Badge bg="success" pill>Verified</Badge>
+          <Badge bg="success">Verified</Badge>
         ) : (
-          <Button
-            variant="outline-success"
-            size="sm"
-            onClick={() => handleVerify(row._id)}
-          >
+          <Button size="sm" variant="outline-success" onClick={() => handleVerify(row._id)}>
             Verify
           </Button>
         ),
       center: true,
-    }
+    },
   ];
 
   return (
     <div className="d-flex flex-column min-vh-100">
       <Header />
-      <ToastContainer position="top-right" autoClose={5000} />
-      <div className="d-flex flex-grow-1 print-hide">
+      <ToastContainer position="top-right" autoClose={4000} />
+      <div className="d-flex flex-grow-1">
         <Sidebar />
-        <main className="flex-grow-1 p-4 bg-light">
+        <main className="flex-grow-1 p-3 bg-light">
           <Container fluid>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ type: 'spring', duration: 0.6 }}
-            >
-              <div className="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
-                <h1 className="h4 fw-bold m-0">Completed Tickets</h1>
-            <motion.div
-  initial={{ opacity: 0, x: 20 }}
-  animate={{ opacity: 1, x: 0 }}
-  transition={{ type: 'spring', duration: 0.5 }}
-  className="d-flex flex-column flex-md-row gap-2"
->
-  <Button variant="outline-success" size="sm" onClick={exportToPDF}>
-    Export PDF
-  </Button>
-  <Button variant="outline-primary" size="sm" onClick={exportToExcel}>
-    Export Excel
-  </Button>
-</motion.div>
-
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6 }}>
+              <div className="mb-3">
+                <h4 className="fw-bold">Completed Tickets</h4>
               </div>
+
+              <Row className="g-2 mb-3">
+                <Col xs={12} md="auto">
+                  <Form.Select
+                    size="sm"
+                    value={selectedAssignee}
+                    onChange={(e) => setSelectedAssignee(e.target.value)}
+                    aria-label="Filter by Assignee"
+                  >
+                    <option value="">All Developers</option>
+                    {assigneeOptions.map((a) => (
+                      <option key={a.gmail} value={a.gmail}>{a.name}</option>
+                    ))}
+                  </Form.Select>
+                </Col>
+
+                <Col xs={12} md="auto">
+                  <Button variant="primary" size="sm" onClick={fetchTickets}>🔄 Refresh</Button>
+                </Col>
+
+                <Col xs={12} md="auto">
+                  <Button variant="outline-success" size="sm" onClick={exportToPDF}>Export PDF</Button>
+                </Col>
+
+                <Col xs={12} md="auto">
+                  <Button variant="outline-primary" size="sm" onClick={exportToExcel}>Export Excel</Button>
+                </Col>
+
+                <Col xs={12} md className="text-md-end">
+                  <input
+                    type="text"
+                    placeholder="Search tickets..."
+                    className="form-control form-control-sm"
+                    style={{ maxWidth: '300px' }}
+                    aria-label="Search Tickets"
+                    value={searchText}
+                    onChange={(e) => setSearchText(e.target.value)}
+                  />
+                </Col>
+              </Row>
 
               {loading ? (
                 <div className="text-center py-5">
-                  <Spinner animation="border" variant="primary" role="status" />
+                  <Spinner animation="border" variant="primary" />
                 </div>
               ) : (
                 <DataTable
@@ -255,19 +286,6 @@ useEffect(() => {
                   highlightOnHover
                   responsive
                   persistTableHead
-                  subHeader
-                  subHeaderComponent={
-                    <div className="w-100 d-flex justify-content-end mb-3">
-                      <input
-                        type="text"
-                        placeholder="Search tickets..."
-                        className="form-control form-control-sm"
-                        style={{ maxWidth: '300px' }}
-                        value={searchText}
-                        onChange={handleSearch}
-                      />
-                    </div>
-                  }
                   noDataComponent={<div className="py-4 text-center">No completed tickets found</div>}
                 />
               )}

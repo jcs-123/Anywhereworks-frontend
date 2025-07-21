@@ -35,7 +35,7 @@ const Dashboard = () => {
     working: '#f8961e',
     completed: '#43aa8b',
     pending: '#f94144',
-    efficiency: '#4cc9f0'
+    verified: '#4cc9f0'
   };
 
   // Animation variants
@@ -88,8 +88,22 @@ useEffect(() => {
       
       setAllTickets(tickets);
       setFilteredTickets(tickets);
-      setDevStats(res.data.development || {});
-      setMaintStats(res.data.maintenance || {});
+     const allDevTickets = tickets.filter(t => t.ticketType === 'Development');
+const allMaintTickets = tickets.filter(t => t.ticketType === 'Maintenance');
+
+const devVerified = allDevTickets.filter(t => t.status === 'Verified').length;
+const maintVerified = allMaintTickets.filter(t => t.status === 'Verified').length;
+
+setDevStats(prev => ({
+  ...res.data.development,
+  verified: devVerified
+}));
+
+setMaintStats(prev => ({
+  ...res.data.maintenance,
+  verified: maintVerified
+}));
+
       setError(null);
     } catch (err) {
       console.error("Fetch failed:", err);
@@ -138,7 +152,9 @@ useEffect(() => {
 
   // Calculate statistics
   const totalTicketCount = filteredTickets.length;
-  const completedCount = filteredTickets.filter(t => t.status === 'Completed').length;
+const completedCount = filteredTickets.filter(
+  t => t.status === 'Completed' || t.status === 'Verified'
+).length;
   const pendingCount = filteredTickets.filter(t => t.status === 'Pending').length;
   const workingCount = filteredTickets.filter(t => t.status === 'Working').length;
   const developmentCount = filteredTickets.filter(t => t.ticketType === 'Development').length;
@@ -158,12 +174,23 @@ useEffect(() => {
     : 0;
 
   // Prepare data for charts
+  // const chartData = (stats = {}) => [
+  //   { name: 'Assigned', value: stats.assigned || 0, color: COLORS.assigned },
+  //   { name: 'Working', value: stats.working || 0, color: COLORS.working },
+  //   { name: 'Completed', value: stats.completed || 0, color: COLORS.completed },
+  //   { name: 'Pending', value: stats.pending || 0, color: COLORS.pending }
+  // ];
   const chartData = (stats = {}) => [
-    { name: 'Assigned', value: stats.assigned || 0, color: COLORS.assigned },
-    { name: 'Working', value: stats.working || 0, color: COLORS.working },
-    { name: 'Completed', value: stats.completed || 0, color: COLORS.completed },
-    { name: 'Pending', value: stats.pending || 0, color: COLORS.pending }
-  ];
+  { name: 'Assigned', value: stats.assigned || 0, color: COLORS.assigned },
+  { name: 'Working', value: stats.working || 0, color: COLORS.working },
+  { 
+    name: 'Completed', 
+    value: (stats.completed || 0) + (stats.verified || 0), // ✅ combine verified + completed
+    color: COLORS.completed 
+  },
+  { name: 'Pending', value: stats.pending || 0, color: COLORS.pending }
+];
+
 
   const barChartData = [
     { name: 'Development', ...devStats },
@@ -378,6 +405,8 @@ const renderPagination = () => {
                     <option value="Working">Working</option>
                     <option value="Completed">Completed</option>
                     <option value="Pending">Pending</option>
+                                        <option value="Verified">Verified</option>
+
                   </Form.Select>
                 
                   {userRole === 'admin' && (

@@ -1,6 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Table, Container, Pagination, Spinner, Badge } from 'react-bootstrap';
+import {
+  Table,
+  Container,
+  Pagination,
+  Spinner,
+  Badge
+} from 'react-bootstrap';
 import { motion } from 'framer-motion';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
@@ -13,8 +19,6 @@ const STATUS_COLOR_MAP = {
   pending: 'warning',
   rejected: 'danger',
   default: 'secondary',
-   
-
 };
 
 function Requestdetails() {
@@ -23,6 +27,15 @@ function Requestdetails() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const rowsPerPage = 8;
+
+  // ✅ Get logged-in user
+  let user = null;
+  try {
+    user = JSON.parse(localStorage.getItem('user'));
+  } catch (e) {
+    console.warn('Invalid user data in localStorage');
+  }
+  const userEmail = user?.gmail?.toLowerCase();
 
   useEffect(() => {
     document.title = 'Request Details';
@@ -37,8 +50,12 @@ function Requestdetails() {
 
       const rawData = response.data?.data || [];
 
+      // ✅ Filter: user-specific tickets with timeRequests
       const filtered = rawData.filter(
-        (ticket) => Array.isArray(ticket.timeRequests) && ticket.timeRequests.length > 0
+        (ticket) =>
+          ticket?.assignedTo?.toLowerCase() === userEmail &&
+          Array.isArray(ticket.timeRequests) &&
+          ticket.timeRequests.length > 0
       );
 
       setTicketData(filtered);
@@ -107,35 +124,31 @@ function Requestdetails() {
                       <th>Subject</th>
                       <th>Requested Hours</th>
                       <th>Request Status</th>
-                                            <th>Request Reason</th>
-
+                      <th>Request Reason</th>
                     </tr>
                   </thead>
-              <tbody>
-  {currentRows.map((ticket, index) => {
-    const latestRequest = ticket.timeRequests?.[ticket.timeRequests.length - 1];
-    return (
-      <motion.tr
-        key={ticket._id || `ticket-${index}`}
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, delay: index * 0.05 }}
-      >
-        <td>{indexOfFirstRow + index + 1}</td>
-        <td>{getStatusBadge(ticket.status)}</td>
-        <td>{ticket.ticketNo || 'N/A'}</td>
-        <td>{ticket.projectName || 'N/A'}</td>
-        <td style={{ whiteSpace: 'pre-line' }}>{ticket.subject || 'N/A'}</td>
-        {/* Removed Created Date */}
-        {/* Removed Request Time */}
-        <td>{latestRequest?.hours ?? 'N/A'}</td>
-        <td>{getStatusBadge(latestRequest?.status || 'Pending')}</td>
-        <td>{latestRequest?.reason || 'N/A'}</td> {/* ✅ New Request Reason */}
-      </motion.tr>
-    );
-  })}
-</tbody>
-
+                  <tbody>
+                    {currentRows.map((ticket, index) => {
+                      const latestRequest = ticket.timeRequests?.[ticket.timeRequests.length - 1];
+                      return (
+                        <motion.tr
+                          key={ticket._id || `ticket-${index}`}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.3, delay: index * 0.05 }}
+                        >
+                          <td>{indexOfFirstRow + index + 1}</td>
+                          <td>{getStatusBadge(ticket.status)}</td>
+                          <td>{ticket.ticketNo || 'N/A'}</td>
+                          <td>{ticket.projectName || 'N/A'}</td>
+                          <td style={{ whiteSpace: 'pre-line' }}>{ticket.subject || 'N/A'}</td>
+                          <td>{latestRequest?.hours ?? 'N/A'}</td>
+                          <td>{getStatusBadge(latestRequest?.status || 'Pending')}</td>
+                          <td>{latestRequest?.reason || 'N/A'}</td>
+                        </motion.tr>
+                      );
+                    })}
+                  </tbody>
                 </Table>
               )}
             </div>
