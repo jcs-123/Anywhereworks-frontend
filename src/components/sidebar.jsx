@@ -101,6 +101,11 @@ function Sidebar({ notCompletedCount }) {
     <i className="bi bi-card-checklist me-2" /> Completed Status
   </Link>
 </li>
+           <li className="nav-item">
+  <Link to="/Report" className="nav-link text-light">
+    <i className="bi bi-card-checklist me-2" /> Worklog
+  </Link>
+</li>
 
             </>
           )}

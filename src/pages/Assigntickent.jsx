@@ -23,12 +23,7 @@ function Assigntickent() {
 
   const [loading, setLoading] = useState(false);
 
-  // const assigneeOptions = [
-  //   { name: 'Jeswin', gmail: 'jeswinjohn@gmail.com' },
-  //   { name: 'Anu Mathew', gmail: 'anu@example.com' },
-  //   { name: 'Arun K', gmail: 'arun@example.com' },
-  //   { name: 'Neha Joseph', gmail: 'neha@example.com' },
-  // ];
+ 
   const assigneeOptions = [
   { name: 'Merin', gmail: 'merinjdominic@jecc.ac.in' },
   { name: 'Sandra', gmail: 'sandraps@jecc.ac.in' },
@@ -240,19 +235,26 @@ const handleAddProject = async () => {
                               />
                             ),
                           },
-                          {
-                            id: 'expectedHours',
-                            label: 'Expected Hours',
-                            control: (
-                              <Form.Control
-                                type="number"
-                                name="expectedHours"
-                                value={formData.expectedHours}
-                                onChange={handleChange}
-                                required
-                              />
-                            ),
-                          },
+                        {
+  id: 'expectedHours',
+  label: 'Expected Hours',
+  control: (
+    <Form.Select
+      name="expectedHours"
+      value={formData.expectedHours}
+      onChange={handleChange}
+      required
+    >
+      <option value="">Select hours</option>
+      {[1, 2, 3, 4, 5, 6].map((hour) => (
+        <option key={hour} value={hour}>
+          {hour}
+        </option>
+      ))}
+    </Form.Select>
+  ),
+}
+,
                           {
                             id: 'assignedTo',
                             label: 'Assign To',

@@ -31,15 +31,24 @@ function TimeRequestModal({ show, onHide, ticket, userId, toast }) {
       </Modal.Header>
       <Modal.Body>
         <Form>
-          <Form.Group className="mb-3">
-            <Form.Label>Additional Hours Needed</Form.Label>
-            <Form.Control
-              type="number"
-              placeholder="Enter hours"
-              value={timeRequestData.hours}
-              onChange={(e) => setTimeRequestData({ ...timeRequestData, hours: e.target.value })}
-            />
-          </Form.Group>
+         <Form.Group className="mb-3">
+  <Form.Label>Additional Hours Needed</Form.Label>
+  <Form.Select
+    value={timeRequestData.hours}
+    onChange={(e) =>
+      setTimeRequestData({ ...timeRequestData, hours: e.target.value })
+    }
+    required
+  >
+    <option value="">Select hours</option>
+    {[1, 2, 3, 4, 5, 6].map((hour) => (
+      <option key={hour} value={hour}>
+        {hour}
+      </option>
+    ))}
+  </Form.Select>
+</Form.Group>
+
           <Form.Group className="mb-3">
             <Form.Label>Reason for Additional Time</Form.Label>
             <Form.Control

@@ -13,6 +13,7 @@ import pdfFonts from 'pdfmake/build/vfs_fonts';
 import 'jspdf-autotable';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
+import WorklogModal from '../components/WorklogModal';
 
 const ReportModule = () => {
   const [loading, setLoading] = useState(false);
@@ -334,8 +335,14 @@ const exportToPDF = () => {
                   <Tabs activeKey={tab} onSelect={(k) => setTab(k)} className="mb-4 justify-content-center">
                     <Tab eventKey="developer" title="Developer Report" />
                     <Tab eventKey="project" title="Project Report" />
-                  </Tabs>
+           <Tab eventKey="worklog" title="+ Work Log">
+  <div className="mt-4 mb-4 d-flex justify-content-center">
+    <WorklogModal />
+  </div>
+</Tab>
 
+                  </Tabs>
+  
                   <Form className="mb-4">
                     <Row className="mb-3 justify-content-center align-items-end">
                       <Col md={3}>

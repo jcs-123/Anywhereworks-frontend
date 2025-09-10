@@ -12,6 +12,7 @@ import CompletedTickets from './pages/CompletedTickets';
 import Requestdetails from './pages/Requestdetails';
 import TicketStatusPage from './pages/TicketStatusPage';
 import ReportModule from './pages/ReportModule';
+import Report from './pages/Report';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -86,7 +87,10 @@ function App() {
         path="/worklogreport"
         element={isLoggedIn ? <ReportModule/>: <Navigate to="/login" />}
       />
-      
+         <Route
+        path="/Report"
+        element={isLoggedIn ? <Report/>: <Navigate to="/login" />}
+      />
       {/* Fallback Route (Optional) */}
       <Route
         path="*"

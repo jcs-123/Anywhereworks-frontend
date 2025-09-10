@@ -36,7 +36,11 @@ function RequestStatus() {
               requestedHours: lastRequest.hours,
               reason: lastRequest.reason,
               status: lastRequest.status,
-              responseNote: lastRequest.responseNote || ''
+              responseNote: lastRequest.responseNote || '',
+              assignedTo: item.assignedTo,
+              assignedBy: item.assignedBy,
+              description: item.description,
+              ticketType: item.ticketType
             };
           });
 
@@ -62,15 +66,44 @@ function RequestStatus() {
   const currentItems = filteredData.slice(indexOfFirst, indexOfLast);
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
 
+  const createNewTicket = async (requestData) => {
+    try {
+      const response = await axios.post('https://anywhereworks-backend.onrender.com/assign', {
+        projectName: requestData.projectName,
+        subject: `Extension for Ticket ${requestData.ticketNo}`,
+        description: requestData.description,
+        expectedHours: requestData.requestedHours,
+        assignedTo: requestData.assignedTo,
+        assignedBy: requestData.assignedBy,
+        ticketType: requestData.ticketType,
+        isExtension: true,
+        originalTicketId: requestData.id
+      });
+      return response.data.ticket;
+    } catch (error) {
+      console.error('Error creating new ticket:', error);
+      throw error;
+    }
+  };
+
   const updateStatus = async (id, status) => {
     const note = responseNotes[id] || '';
     try {
+      const requestData = data.find(item => item.id === id);
+      
+      // First update the status
       await axios.post('https://anywhereworks-backend.onrender.com/ticketrequest/update-status', {
         ticketId: id,
         status,
         responseNote: note
       });
 
+      // If approved, create a new ticket
+      if (status === 'Approved' && requestData) {
+        await createNewTicket(requestData);
+      }
+
+      // Update local state
       setData(prev =>
         prev.map(item =>
           item.id === id ? { ...item, status, responseNote: note } : item
