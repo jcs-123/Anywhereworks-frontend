@@ -258,7 +258,7 @@ const fetchWorklogs = async () => {
     try {
       // Update only "notcomplete" worklogs that are not holidays
       const idsToUpdate = filteredWorklogs
-        .filter(worklog => worklog.devstatus === 'notcomplete' && worklog.dayType !== 'holiday')
+        .filter(worklog => worklog.devstatus === 'notcomplete')
         .map(worklog => worklog._id);
 
       if (idsToUpdate.length > 0) {

@@ -66,7 +66,7 @@ function Sidebar({ notCompletedCount }) {
               </li>
               <li className="nav-item">
                 <Link to="/completedtickets" className="nav-link text-light">
-                  <i className="bi bi-list-check me-2" /> Completed Tickets
+                  <i className="bi bi-list-check me-1" /> Completed Tickets
                 </Link>
               </li>
               <li className="nav-item">
@@ -77,6 +77,11 @@ function Sidebar({ notCompletedCount }) {
               <li className="nav-item">
                 <Link to="/worklogreport" className="nav-link text-light">
                   <i className="bi bi-box-arrow-right me-2" /> Worklog Report
+                </Link>
+              </li>
+                <li className="ms-2">
+                <Link to="/Renewal" style={{backgroundColor:"white" ,border:"4px black",color:"black"}} className="nav-link  fs-6 ">
+                  <i className="bi  me-2" /> Renewal Dates
                 </Link>
               </li>
             </>

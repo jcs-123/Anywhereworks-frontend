@@ -26,12 +26,7 @@ const ReportModule = () => {
   const [reportData, setReportData] = useState([]);
   const [error, setError] = useState(null);
 
-// const developers = [
-//   { name: 'Jeswin', gmail: 'jeswinjohn03@gmail.com' },
-//   { name: 'Anu Mathew', gmail: 'anu@example.com' },
-//   { name: 'Arun K', gmail: 'arun@example.com' },
-//   { name: 'Neha Joseph', gmail: 'neha@example.com' }
-// ];
+
 const developers = [
   { name: 'Merin', gmail: 'merinjdominic@jecc.ac.in' },
   { name: 'Sandra', gmail: 'sandraps@jecc.ac.in' },

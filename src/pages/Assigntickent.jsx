@@ -81,44 +81,62 @@ const handleAddProject = async () => {
     }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
 
-    try {
-      const data = new FormData();
-      const currentDate = new Date().toISOString();
-      formData.assignedDate = currentDate;
+  try {
+    const currentDate = new Date().toISOString();
+    const dataToSend = { ...formData, assignedDate: currentDate };
 
-      Object.entries(formData).forEach(([key, value]) => {
-        if (value) data.append(key, value);
-      });
+    const data = new FormData();
+    Object.entries(dataToSend).forEach(([key, value]) => {
+      if (value) {
+        data.append(key, value);
+      }
+    });
 
-      await axios.post('https://anywhereworks-backend.onrender.com/assign', data, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-
-      toast.success('Ticket assigned and email sent');
-
-      // ✅ Reset form (except assignedBy)
-      setFormData((prev) => ({
-        projectName: '',
-        subject: '',
-        description: '',
-        expectedHours: '',
-        ticketType: '',
-        file: null,
-        assignedTo: '',
-        assignedBy: prev.assignedBy,
-        assignedDate: '',
-      }));
-    } catch (err) {
-      console.error('Ticket submission failed:', err);
-      toast.error('❌ Failed to assign ticket. Please try again.');
-    } finally {
-      setLoading(false);
+    // 🔍 Debug: print what’s being sent
+    for (let [key, val] of data.entries()) {
+      console.log(key, val);
     }
-  };
+
+    await axios.post(
+      "https://anywhereworks-backend.onrender.com/assign",
+      data,
+      { headers: { "Content-Type": "multipart/form-data" } }
+    );
+
+    toast.success("✅ Ticket assigned and email sent");
+
+    setFormData((prev) => ({
+      projectName: "",
+      subject: "",
+      description: "",
+      expectedHours: "",
+      ticketType: "",
+      file: null,
+      assignedTo: "",
+      assignedBy: prev.assignedBy,
+      assignedDate: "",
+    }));
+  } catch (err) {
+    // 🔍 Better error logging
+    if (err.response) {
+      console.error("📌 Backend error:", err.response.data);
+      console.error("📌 Status:", err.response.status);
+      console.error("📌 Headers:", err.response.headers);
+    } else if (err.request) {
+      console.error("📌 No response received:", err.request);
+    } else {
+      console.error("📌 Error setting up request:", err.message);
+    }
+    toast.error("❌ Failed to assign ticket. Please try again.");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div>

@@ -368,3 +368,28 @@ main {
 .progress {
   border-radius: 3px;
 }
+/* renewal
+ */
+ .expired-row {
+  border: 2px solid #dc3545 !important; /* red */
+  background-color: #fff !important;
+  color: #000 !important;
+}
+
+.due-soon-row {
+  border: 2px solid #fd7e14 !important; /* orange */
+  background-color: #fff !important;
+  color: #000 !important;
+}
+
+.warning-row {
+  border: 2px solid #ffc107 !important; /* yellow */
+  background-color: #fff !important;
+  color: #000 !important;
+}
+
+.info-row {
+  border: 2px solid #0dcaf0 !important; /* blue */
+  background-color: #fff !important;
+  color: #000 !important;
+}
