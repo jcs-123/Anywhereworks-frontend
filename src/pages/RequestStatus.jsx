@@ -18,8 +18,10 @@ function RequestStatus() {
   const [currentPage, setCurrentPage] = useState(1);
   const [responseNotes, setResponseNotes] = useState({});
   const [loading, setLoading] = useState(true);
-  const itemsPerPage = 5;
 
+  const itemsPerPage = 10; // ✅ show 5 items per page
+
+  // ===== Fetch Ticket Requests =====
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -56,16 +58,30 @@ function RequestStatus() {
     fetchData();
   }, []);
 
-  const filteredData = data.filter((item) => {
-    if (filter === 'all') return true;
-    return item.status === filter.charAt(0).toUpperCase() + filter.slice(1);
-  });
+  // ===== Filter + Sort =====
+  const filteredData = data
+    .filter(item => {
+      if (filter === 'all') return true;
+      return item.status === filter.charAt(0).toUpperCase() + filter.slice(1);
+    })
+    .sort((a, b) => {
+      // Sort order: Pending → Approved → Rejected
+      const order = { Pending: 1, Approved: 2, Rejected: 3 };
+      return order[a.status] - order[b.status];
+    });
 
+  // ===== Reset Page When Filter/Data Changes =====
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter, data]);
+
+  // ===== Pagination =====
   const indexOfLast = currentPage * itemsPerPage;
   const indexOfFirst = indexOfLast - itemsPerPage;
   const currentItems = filteredData.slice(indexOfFirst, indexOfLast);
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
 
+  // ===== Create New Ticket if Approved =====
   const createNewTicket = async (requestData) => {
     try {
       const response = await axios.post('https://anywhereworks-backend.onrender.com/assign', {
@@ -86,24 +102,25 @@ function RequestStatus() {
     }
   };
 
+  // ===== Update Request Status =====
   const updateStatus = async (id, status) => {
     const note = responseNotes[id] || '';
     try {
       const requestData = data.find(item => item.id === id);
-      
-      // First update the status
+
+      // Update backend
       await axios.post('https://anywhereworks-backend.onrender.com/ticketrequest/update-status', {
         ticketId: id,
         status,
         responseNote: note
       });
 
-      // If approved, create a new ticket
+      // Create new ticket if approved
       if (status === 'Approved' && requestData) {
         await createNewTicket(requestData);
       }
 
-      // Update local state
+      // Update local UI
       setData(prev =>
         prev.map(item =>
           item.id === id ? { ...item, status, responseNote: note } : item
@@ -118,10 +135,12 @@ function RequestStatus() {
     }
   };
 
+  // ===== Handle Note Change =====
   const handleResponseNoteChange = (id, note) => {
     setResponseNotes(prev => ({ ...prev, [id]: note }));
   };
 
+  // ===== Export to Excel =====
   const exportToExcel = () => {
     const ws = XLSX.utils.json_to_sheet(filteredData.map(item => ({
       'Ticket ID': item.ticketNo,
@@ -138,6 +157,7 @@ function RequestStatus() {
     toast.success('Excel report generated');
   };
 
+  // ===== Export to PDF =====
   const exportToPDF = () => {
     const doc = new jsPDF();
     doc.setFontSize(16);
@@ -162,11 +182,12 @@ function RequestStatus() {
     toast.success('PDF report generated');
   };
 
+  // ===== Badge Helper =====
   const getStatusBadge = (status) => {
     switch (status) {
       case 'Approved': return <Badge bg="success">Approved</Badge>;
       case 'Rejected': return <Badge bg="danger">Rejected</Badge>;
-      default: return <Badge bg="warning">Pending</Badge>;
+      default: return <Badge bg="warning text-dark">Pending</Badge>;
     }
   };
 
@@ -178,8 +199,11 @@ function RequestStatus() {
         <Sidebar />
         <main className="flex-grow-1 p-4 bg-light">
           <Container fluid>
+            {/* ===== Header Controls ===== */}
             <Row className="mb-3 justify-content-between align-items-center">
-              <Col md={4}><h4 className="fw-bold">Extra Time Request Status</h4></Col>
+              <Col md={4}>
+                <h4 className="fw-bold">Extra Time Request Status</h4>
+              </Col>
               <Col className="text-end">
                 <ButtonGroup className="me-3">
                   {['all', 'approved', 'rejected', 'pending'].map(f => (
@@ -202,6 +226,7 @@ function RequestStatus() {
               </Col>
             </Row>
 
+            {/* ===== Table ===== */}
             {loading ? (
               <div className="text-center py-5">
                 <Spinner animation="border" variant="primary" />
@@ -223,7 +248,17 @@ function RequestStatus() {
                   </thead>
                   <tbody className="text-center">
                     {currentItems.map((item, index) => (
-                      <tr key={item.id}>
+                      <tr
+                        key={item.id}
+                        style={{
+                          backgroundColor:
+                            item.status === 'Pending'
+                              ? '#fff8e1'
+                              : item.status === 'Approved'
+                              ? '#e8f5e9'
+                              : '#ffebee'
+                        }}
+                      >
                         <td>{indexOfFirst + index + 1}</td>
                         <td>{item.ticketNo}</td>
                         <td className="text-start">{item.projectName}</td>
@@ -280,24 +315,37 @@ function RequestStatus() {
                   </tbody>
                 </Table>
 
+                {/* ===== Empty State ===== */}
                 {filteredData.length === 0 && (
                   <div className="text-center py-4 text-muted">
                     No requests found for this filter.
                   </div>
                 )}
 
+                {/* ===== Pagination ===== */}
                 {totalPages > 1 && (
                   <Pagination className="justify-content-center mt-3">
                     <Pagination.First onClick={() => setCurrentPage(1)} disabled={currentPage === 1} />
                     <Pagination.Prev onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1} />
                     {Array.from({ length: totalPages }, (_, i) => (
-                      <Pagination.Item key={i} active={i + 1 === currentPage} onClick={() => setCurrentPage(i + 1)}>
+                      <Pagination.Item
+                        key={i}
+                        active={i + 1 === currentPage}
+                        onClick={() => setCurrentPage(i + 1)}
+                      >
                         {i + 1}
                       </Pagination.Item>
                     ))}
                     <Pagination.Next onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages} />
                     <Pagination.Last onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages} />
                   </Pagination>
+                )}
+
+                {/* Page Summary */}
+                {filteredData.length > 0 && (
+                  <div className="text-center mt-2 text-muted small">
+                    Showing {indexOfFirst + 1}–{Math.min(indexOfLast, filteredData.length)} of {filteredData.length} requests
+                  </div>
                 )}
               </div>
             )}

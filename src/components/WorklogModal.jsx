@@ -70,90 +70,94 @@ const WorklogReport = () => {
   };
 
   const fetchTickets = async () => {
-    try {
-      setLoading(true);
-      const response = await axios.get('https://anywhereworks-backend.onrender.com/tickets', {
-        params: { status: ['Completed', 'Verified'] },
-        validateStatus: (status) => status >= 200 && status < 500
-      });
+  try {
+    setLoading(true);
+    const response = await axios.get('https://anywhereworks-backend.onrender.com/tickets', {
+      params: { status: ['Completed', 'Verified'] },
+      validateStatus: (status) => status >= 200 && status < 500
+    });
 
-      let ticketsData = [];
-      if (Array.isArray(response.data)) {
-        ticketsData = response.data;
-      } else if (response.data && Array.isArray(response.data.data)) {
-        ticketsData = response.data.data;
-      } else if (response.data && Array.isArray(response.data.tickets)) {
-        ticketsData = response.data.tickets;
-      }
+    let ticketsData = [];
+    if (Array.isArray(response.data)) {
+      ticketsData = response.data;
+    } else if (response.data && Array.isArray(response.data.data)) {
+      ticketsData = response.data.data;
+    } else if (response.data && Array.isArray(response.data.tickets)) {
+      ticketsData = response.data.tickets;
+    }
 
-      const completedTickets = ticketsData.filter(ticket => 
-        (ticket.status === 'Completed' || ticket.status === 'Verified') && 
-        ticket.ticketNo && 
-        ticket.projectName && 
-        ticket.subject &&
-        ticket.assignedTo
+    const completedTickets = ticketsData.filter(ticket =>
+      (ticket.status === 'Completed' || ticket.status === 'Verified') &&
+      ticket.ticketNo &&
+      ticket.projectName &&
+      ticket.subject &&
+      ticket.assignedTo
+    );
+
+    if (completedTickets.length === 0) {
+      toast.info('No completed tickets available');
+      setTickets([]);
+      return;
+    }
+
+    // ✅ Correct expected/actual hour logic
+    const mappedTickets = completedTickets.map(ticket => {
+      const isOnline = ONLINE_EMPLOYEES.some(emp =>
+        emp.gmail.toLowerCase() === ticket.assignedTo.toLowerCase()
       );
 
-      if (completedTickets.length === 0) {
-        toast.info('No completed tickets available');
-        setTickets([]);
-        return;
+      // ✅ Use DB expectedHours directly
+      let actualHours = Number(ticket.expectedHours);
+      if (isNaN(actualHours) || actualHours <= 0) {
+        actualHours = isOnline ? MAX_DAILY_HOURS : DAILY_TARGET_HOURS; // fallback only if missing
       }
 
-      const mappedTickets = completedTickets.map(ticket => {
-        const isOnline = ONLINE_EMPLOYEES.some(emp => 
-          emp.name.toLowerCase() === ticket.assignedTo.toLowerCase()
-        );
-        
-        // Calculate actual hours based on assigned and completed dates
-        let actualHours = 0;
-        if (ticket.assignedDate && ticket.completedTime) {
-          const assignedDate = new Date(ticket.assignedDate);
-          const completedDate = new Date(ticket.completedTime);
-          const diffTime = Math.abs(completedDate - assignedDate);
-          actualHours = Math.min(Math.ceil(diffTime / (1000 * 60 * 60)), 
-                                isOnline ? MAX_DAILY_HOURS : DAILY_TARGET_HOURS);
-        } else {
-          actualHours = isOnline ? MAX_DAILY_HOURS : DAILY_TARGET_HOURS;
-        }
+      return {
+        id: ticket.ticketNo,
+        project: ticket.projectName,
+        title: ticket.subject,
+        actualHours,
+        assignedTo: ticket.assignedTo,
+        status: ticket.status,
+        assignedDate: ticket.assignedDate ? new Date(ticket.assignedDate) : null,
+        completedTime: ticket.completedTime ? new Date(ticket.completedTime) : null,
+        expectedHours: ticket.expectedHours, // keep visible for debugging
+        isOnline
+      };
+    });
 
-        return {
-          id: ticket.ticketNo,
-          project: ticket.projectName,
-          title: ticket.subject,
-          actualHours: actualHours,
-          assignedTo: ticket.assignedTo,
-          status: ticket.status,
-          assignedDate: ticket.assignedDate ? new Date(ticket.assignedDate) : null,
-          completedTime: ticket.completedTime ? new Date(ticket.completedTime) : null,
-          isOnline
-        };
-      });
+    console.log("✅ Sample ticket data (first 10):");
+    mappedTickets.slice(0, 10).forEach(t =>
+      console.log(
+        `Ticket ${t.id} | ${t.title} | expectedHours: ${t.expectedHours} | actualHours: ${t.actualHours}`
+      )
+    );
 
-      setTickets(mappedTickets);
-      
-      // Extract unique developers and set them as options
-      const developers = [...new Set(mappedTickets.map(ticket => ticket.assignedTo))];
-      setAllDevelopers(developers);
-      setSelectedDevelopers(developers); // Select all by default
-      
-      toast.success(`Loaded ${mappedTickets.length} completed tickets`, {
-        autoClose: 2000
-      });
-    } catch (error) {
-      if (error.response?.status === 404) {
-        toast.warning('No completed tickets found');
-      } else if (error.response?.status === 401) {
-        toast.error('Authentication required');
-      } else {
-        toast.error('Failed to fetch tickets. Please try again.');
-        console.error('Ticket fetch error:', error);
-      }
-      setTickets([]);
-    } finally {
-      setLoading(false);
+    setTickets(mappedTickets);
+
+    // Extract unique developers
+    const developers = [...new Set(mappedTickets.map(ticket => ticket.assignedTo))];
+    setAllDevelopers(developers);
+    setSelectedDevelopers(developers); // Select all by default
+
+    toast.success(`Loaded ${mappedTickets.length} completed tickets`, {
+      autoClose: 2000
+    });
+  } catch (error) {
+    if (error.response?.status === 404) {
+      toast.warning('No completed tickets found');
+    } else if (error.response?.status === 401) {
+      toast.error('Authentication required');
+    } else {
+      toast.error('Failed to fetch tickets. Please try again.');
+      console.error('Ticket fetch error:', error);
     }
-  };
+    setTickets([]);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const handleShow = () => setShow(true);
   const handleClose = () => {
