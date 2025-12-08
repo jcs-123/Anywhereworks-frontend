@@ -31,10 +31,11 @@ const developers = [
   { name: 'Merin', gmail: 'merinjdominic@jecc.ac.in' },
   { name: 'Sandra', gmail: 'sandraps@jecc.ac.in' },
   { name: 'Deepthi', gmail: 'deepthimohan@jecc.ac.in' },
-  { name: 'Abin', gmail: 'abinjose@jecc.ac.in' },
   { name: 'Jeswin', gmail: 'jeswinjohn@jecc.ac.in' },
   { name: 'Pravitha', gmail: 'pravithacp@jecc.ac.in' },
-  { name: 'Hima', gmail: 'himappradeep@jecc.ac.in' }
+  { name: 'Hima', gmail: 'himappradeep@jecc.ac.in' },
+      { name: 'anjiya', gmail: 'anjiyapj@gmail.com' },
+
 ];
 
 const [projects, setProjects] = useState([]);

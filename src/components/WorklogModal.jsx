@@ -70,94 +70,93 @@ const WorklogReport = () => {
   };
 
   const fetchTickets = async () => {
-  try {
-    setLoading(true);
-    const response = await axios.get('https://anywhereworks-backend.onrender.com/tickets', {
-      params: { status: ['Completed', 'Verified'] },
-      validateStatus: (status) => status >= 200 && status < 500
-    });
+    try {
+      setLoading(true);
+      const response = await axios.get('https://anywhereworks-backend.onrender.com/tickets', {
+        params: { status: ['Completed', 'Verified'] },
+        validateStatus: (status) => status >= 200 && status < 500
+      });
 
-    let ticketsData = [];
-    if (Array.isArray(response.data)) {
-      ticketsData = response.data;
-    } else if (response.data && Array.isArray(response.data.data)) {
-      ticketsData = response.data.data;
-    } else if (response.data && Array.isArray(response.data.tickets)) {
-      ticketsData = response.data.tickets;
-    }
-
-    const completedTickets = ticketsData.filter(ticket =>
-      (ticket.status === 'Completed' || ticket.status === 'Verified') &&
-      ticket.ticketNo &&
-      ticket.projectName &&
-      ticket.subject &&
-      ticket.assignedTo
-    );
-
-    if (completedTickets.length === 0) {
-      toast.info('No completed tickets available');
-      setTickets([]);
-      return;
-    }
-
-    // ✅ Correct expected/actual hour logic
-    const mappedTickets = completedTickets.map(ticket => {
-      const isOnline = ONLINE_EMPLOYEES.some(emp =>
-        emp.gmail.toLowerCase() === ticket.assignedTo.toLowerCase()
-      );
-
-      // ✅ Use DB expectedHours directly
-      let actualHours = Number(ticket.expectedHours);
-      if (isNaN(actualHours) || actualHours <= 0) {
-        actualHours = isOnline ? MAX_DAILY_HOURS : DAILY_TARGET_HOURS; // fallback only if missing
+      let ticketsData = [];
+      if (Array.isArray(response.data)) {
+        ticketsData = response.data;
+      } else if (response.data && Array.isArray(response.data.data)) {
+        ticketsData = response.data.data;
+      } else if (response.data && Array.isArray(response.data.tickets)) {
+        ticketsData = response.data.tickets;
       }
 
-      return {
-        id: ticket.ticketNo,
-        project: ticket.projectName,
-        title: ticket.subject,
-        actualHours,
-        assignedTo: ticket.assignedTo,
-        status: ticket.status,
-        assignedDate: ticket.assignedDate ? new Date(ticket.assignedDate) : null,
-        completedTime: ticket.completedTime ? new Date(ticket.completedTime) : null,
-        expectedHours: ticket.expectedHours, // keep visible for debugging
-        isOnline
-      };
-    });
+      const completedTickets = ticketsData.filter(ticket =>
+        (ticket.status === 'Completed' || ticket.status === 'Verified') &&
+        ticket.ticketNo &&
+        ticket.projectName &&
+        ticket.subject &&
+        ticket.assignedTo
+      );
 
-    console.log("✅ Sample ticket data (first 10):");
-    mappedTickets.slice(0, 10).forEach(t =>
-      console.log(
-        `Ticket ${t.id} | ${t.title} | expectedHours: ${t.expectedHours} | actualHours: ${t.actualHours}`
-      )
-    );
+      if (completedTickets.length === 0) {
+        toast.info('No completed tickets available');
+        setTickets([]);
+        return;
+      }
 
-    setTickets(mappedTickets);
+      // ✅ Correct expected/actual hour logic
+      const mappedTickets = completedTickets.map(ticket => {
+        const isOnline = ONLINE_EMPLOYEES.some(emp =>
+          emp.gmail.toLowerCase() === ticket.assignedTo.toLowerCase()
+        );
 
-    // Extract unique developers
-    const developers = [...new Set(mappedTickets.map(ticket => ticket.assignedTo))];
-    setAllDevelopers(developers);
-    setSelectedDevelopers(developers); // Select all by default
+        // ✅ Use DB expectedHours directly
+        let actualHours = Number(ticket.expectedHours);
+        if (isNaN(actualHours) || actualHours <= 0) {
+          actualHours = isOnline ? MAX_DAILY_HOURS : DAILY_TARGET_HOURS; // fallback only if missing
+        }
 
-    toast.success(`Loaded ${mappedTickets.length} completed tickets`, {
-      autoClose: 2000
-    });
-  } catch (error) {
-    if (error.response?.status === 404) {
-      toast.warning('No completed tickets found');
-    } else if (error.response?.status === 401) {
-      toast.error('Authentication required');
-    } else {
-      toast.error('Failed to fetch tickets. Please try again.');
-      console.error('Ticket fetch error:', error);
+        return {
+          id: ticket.ticketNo,
+          project: ticket.projectName,
+          title: ticket.subject,
+          actualHours,
+          assignedTo: ticket.assignedTo,
+          status: ticket.status,
+          assignedDate: ticket.assignedDate ? new Date(ticket.assignedDate) : null,
+          completedTime: ticket.completedTime ? new Date(ticket.completedTime) : null,
+          expectedHours: ticket.expectedHours, // keep visible for debugging
+          isOnline
+        };
+      });
+
+      console.log("✅ Sample ticket data (first 10):");
+      mappedTickets.slice(0, 10).forEach(t =>
+        console.log(
+          `Ticket ${t.id} | ${t.title} | expectedHours: ${t.expectedHours} | actualHours: ${t.actualHours}`
+        )
+      );
+
+      setTickets(mappedTickets);
+
+      // Extract unique developers
+      const developers = [...new Set(mappedTickets.map(ticket => ticket.assignedTo))];
+      setAllDevelopers(developers);
+      setSelectedDevelopers(developers); // Select all by default
+
+      toast.success(`Loaded ${mappedTickets.length} completed tickets`, {
+        autoClose: 2000
+      });
+    } catch (error) {
+      if (error.response?.status === 404) {
+        toast.warning('No completed tickets found');
+      } else if (error.response?.status === 401) {
+        toast.error('Authentication required');
+      } else {
+        toast.error('Failed to fetch tickets. Please try again.');
+        console.error('Ticket fetch error:', error);
+      }
+      setTickets([]);
+    } finally {
+      setLoading(false);
     }
-    setTickets([]);
-  } finally {
-    setLoading(false);
-  }
-};
-
+  };
 
   const handleShow = () => setShow(true);
   const handleClose = () => {
@@ -209,7 +208,8 @@ const WorklogReport = () => {
     toast.info('Holiday removed');
   };
 
-  const getWorkingDays = (start, end, excludedHolidays) => {
+  // ✅ FIXED: Get ALL days in range (including weekends and holidays)
+  const getAllDaysInRange = (start, end) => {
     const result = [];
     const current = new Date(start);
     current.setHours(0, 0, 0, 0);
@@ -217,12 +217,24 @@ const WorklogReport = () => {
     endDate.setHours(0, 0, 0, 0);
     
     while (current <= endDate) {
-      const dateStr = formatDate(current);
-      const dayType = getDayType(current, excludedHolidays);
-      
-      // Only count working days
+      result.push(formatDate(current));
+      current.setDate(current.getDate() + 1);
+    }
+    return result;
+  };
+
+  // ✅ FIXED: Get only working days (excluding weekends and holidays)
+  const getWorkingDays = (start, end) => {
+    const result = [];
+    const current = new Date(start);
+    current.setHours(0, 0, 0, 0);
+    const endDate = new Date(end);
+    endDate.setHours(0, 0, 0, 0);
+    
+    while (current <= endDate) {
+      const dayType = getDayType(current, holidays);
       if (dayType === 'working') {
-        result.push(dateStr);
+        result.push(formatDate(current));
       }
       current.setDate(current.getDate() + 1);
     }
@@ -248,14 +260,18 @@ const WorklogReport = () => {
     setLoading(true);
     
     try {
-      const workingDays = getWorkingDays(startDate, endDate, holidays);
+      // ✅ FIXED: Use ALL days for daily breakdown
+      const allDays = getAllDaysInRange(startDate, endDate);
+      // ✅ Use only working days for target calculation
+      const workingDays = getWorkingDays(startDate, endDate);
+      
       const summary = {};
 
       // Initialize summary for each selected developer
       selectedDevelopers.forEach(dev => {
         summary[dev] = {
           totalHours: 0,
-          daysWorked: new Set(),
+          daysWorked: new Set(), // Days they actually worked
           ticketsCompleted: new Set(),
           isOnline: false,
           dailyHours: {},
@@ -263,7 +279,7 @@ const WorklogReport = () => {
         };
       });
 
-      // Process each ticket and assign to the completion date
+      // ✅ FIXED: Process tickets for ALL days (including weekends)
       tickets.forEach(ticket => {
         if (!ticket.completedTime || !selectedDevelopers.includes(ticket.assignedTo)) return;
 
@@ -271,8 +287,8 @@ const WorklogReport = () => {
         completedDate.setHours(0, 0, 0, 0);
         const completedDateStr = formatDate(completedDate);
         
-        // Check if the completion date is within our working days
-        if (workingDays.includes(completedDateStr)) {
+        // ✅ Check if the completion date is within our selected date range (ALL days)
+        if (allDays.includes(completedDateStr)) {
           const devSummary = summary[ticket.assignedTo];
           
           // Update developer's online status
@@ -281,7 +297,7 @@ const WorklogReport = () => {
           // Update total hours
           devSummary.totalHours += ticket.actualHours;
           
-          // Add working day
+          // Add working day (day they actually worked)
           devSummary.daysWorked.add(completedDateStr);
           
           // Add completed ticket
@@ -309,44 +325,28 @@ const WorklogReport = () => {
       // Convert summary to array format
       const summaryArray = Object.entries(summary).map(([developer, data]) => {
         const daysWorked = data.daysWorked.size;
+        
+        // ✅ Calculate monthly target based on WORKING days only
         const monthlyTargetHours = workingDays.length * DAILY_TARGET_HOURS;
-        const efficiency = (data.totalHours / monthlyTargetHours) * 100;
+        const efficiency = monthlyTargetHours > 0 ? (data.totalHours / monthlyTargetHours) * 100 : 0;
         const avgHoursPerDay = daysWorked > 0 ? (data.totalHours / daysWorked).toFixed(1) : '0.0';
         
-        // Prepare daily breakdown with ALL dates in the range
-        const dailyBreakdown = [];
-        const current = new Date(startDate);
-        current.setHours(0, 0, 0, 0);
-        const endDateObj = new Date(endDate);
-        endDateObj.setHours(0, 0, 0, 0);
-        
-        while (current <= endDateObj) {
-          const dateStr = formatDate(current);
-          const dayType = getDayType(current, holidays);
+        // ✅ Prepare daily breakdown with ALL dates in the range (including weekends)
+        const dailyBreakdown = allDays.map(dateStr => {
+          const date = new Date(dateStr);
+          const dayType = getDayType(date, holidays);
           
-          // Add entry for every date in the range
-          if (data.dailyHours[dateStr]) {
-            // Date with work data
-            dailyBreakdown.push({
-              date: dateStr,
-              hours: data.dailyHours[dateStr],
-              achieved: data.dailyHours[dateStr] >= DAILY_TARGET_HOURS ? 'Yes' : 'No',
-              tickets: data.ticketDetails[dateStr] || [],
-              dayType: dayType
-            });
-          } else {
-            // Date without work data
-            dailyBreakdown.push({
-              date: dateStr,
-              hours: 0,
-              achieved: 'No',
-              tickets: [],
-              dayType: dayType
-            });
-          }
+          const hours = data.dailyHours[dateStr] || 0;
+          const ticketsForDay = data.ticketDetails[dateStr] || [];
           
-          current.setDate(current.getDate() + 1);
-        }
+          return {
+            date: dateStr,
+            hours: hours,
+            achieved: hours >= DAILY_TARGET_HOURS ? 'Yes' : 'No',
+            tickets: ticketsForDay,
+            dayType: dayType
+          };
+        });
         
         return {
           developer,
@@ -357,12 +357,15 @@ const WorklogReport = () => {
           monthlyTarget: monthlyTargetHours,
           efficiency: efficiency.toFixed(1) + '%',
           isOnline: data.isOnline,
-          dailyBreakdown
+          dailyBreakdown,
+          // Additional metrics for better analysis
+          totalWorkingDays: workingDays.length,
+          totalDaysInRange: allDays.length
         };
       });
       
       setSummaryData(summaryArray);
-      toast.success('Completed worklog report generated!');
+      toast.success(`Report generated! Analyzed ${allDays.length} days (${workingDays.length} working days)`);
     } catch (error) {
       toast.error('Error generating report');
       console.error(error);
@@ -386,6 +389,8 @@ const WorklogReport = () => {
         'Days Worked': summary.daysWorked,
         'Total Hours': summary.totalHours,
         'Monthly Target': summary.monthlyTarget,
+        'Working Days in Period': summary.totalWorkingDays,
+        'Total Days in Period': summary.totalDaysInRange,
         'Avg Hours/Day': summary.avgHoursPerDay,
         'Efficiency': summary.efficiency
       }));
@@ -397,11 +402,12 @@ const WorklogReport = () => {
           dailyBreakdown.push({
             'Developer': summary.developer,
             'Date': day.date,
+            'Day Type': day.dayType,
             'Hours Worked': day.hours,
             'Daily Target': DAILY_TARGET_HOURS,
             'Status': day.achieved,
-            'Day Type': day.dayType,
-            'Tickets Completed': day.tickets.length
+            'Tickets Completed': day.tickets.length,
+            'Ticket Details': day.tickets.map(t => `${t.ticketNo}: ${t.title} (${t.hours}h)`).join('; ')
           });
         });
       });
@@ -452,13 +458,13 @@ const WorklogReport = () => {
             status: day.achieved,
             isOnline: summary.isOnline,
             tickets: day.tickets,
-            dayType: day.dayType, // Added dayType to the upload data
+            dayType: day.dayType,
             reportPeriod: {
               startDate: formatDate(startDate),
               endDate: formatDate(endDate)
             },
-            hide: 'unblock', // Default value as string
-            devstatus: 'notcomplete' // Default value
+            hide: 'unblock',
+            devstatus: 'notcomplete'
           });
         });
       });
@@ -503,9 +509,9 @@ const WorklogReport = () => {
         <Button onClick={handleShow} variant="primary" size="lg">
           Generate Completed Worklog Report
         </Button>
-         <div>
-                <ReportsPage/>
-              </div>
+        <div>
+          <ReportsPage/>
+        </div>
       </div>
 
       <Modal show={show} onHide={handleClose} size="xl" centered scrollable>
@@ -659,7 +665,6 @@ const WorklogReport = () => {
                   'Generate Report'
                 )}
               </Button>    
-             
               
               {summaryData.length > 0 && (
                 <>
@@ -705,6 +710,8 @@ const WorklogReport = () => {
                         <th>Days Worked</th>
                         <th>Total Hours</th>
                         <th>Monthly Target</th>
+                        <th>Working Days</th>
+                        <th>Total Days</th>
                         <th>Avg Hours/Day</th>
                         <th>Efficiency</th>
                       </tr>
@@ -722,6 +729,8 @@ const WorklogReport = () => {
                           <td>{summary.daysWorked}</td>
                           <td>{summary.totalHours}</td>
                           <td>{summary.monthlyTarget}</td>
+                          <td>{summary.totalWorkingDays}</td>
+                          <td>{summary.totalDaysInRange}</td>
                           <td>{summary.avgHoursPerDay}</td>
                           <td>
                             <Badge bg={parseFloat(summary.efficiency) >= 100 ? 'success' : 
@@ -736,7 +745,7 @@ const WorklogReport = () => {
                 </div>
 
                 <div className="mb-4">
-                  <h4 className="mb-3">Daily Work Hours Breakdown</h4>
+                  <h4 className="mb-3">Daily Work Hours Breakdown (Including Weekends & Holidays)</h4>
                   {summaryData.map((summary, index) => (
                     <div key={index} className="mb-4">
                       <h5>
@@ -744,6 +753,9 @@ const WorklogReport = () => {
                         <Badge bg={summary.isOnline ? 'success' : 'secondary'} className="ms-2">
                           {summary.isOnline ? 'Online' : 'Offline'}
                         </Badge>
+                        <small className="text-muted ms-2">
+                          (Total: {summary.totalHours}h | Target: {summary.monthlyTarget}h | Efficiency: {summary.efficiency})
+                        </small>
                       </h5>
                       <Table striped bordered hover responsive size="sm">
                         <thead>

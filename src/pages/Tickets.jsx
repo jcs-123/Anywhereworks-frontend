@@ -453,45 +453,104 @@ const notCompletedCount = tickets.filter(
                         <div className="border p-2 rounded bg-light">{selectedTicket.description}</div>
                       </Col>
                     </Row>
-                    {selectedTicket.file && (
-                      <Row className="mt-4">
-                        <Col>
-                          <p><strong>Uploaded File:</strong></p>
-                          <div className="d-flex gap-2 mb-3">
-                            <Button
-                              variant="outline-primary"
-                              size="sm"
-                              onClick={() => handleViewFile(selectedTicket.file)}
-                              disabled={fileLoading}
-                            >
-                              {fileLoading ? 'Loading...' : '🔍 View File'}
-                            </Button>
-                           
-                          </div>
+               {selectedTicket.file && (
+  <Row className="mt-4">
+    <Col>
+      <p><strong>Uploaded File:</strong></p>
 
-                       
-                          {selectedTicket.file.match(/\.(jpeg|jpg|png|gif|bmp|webp)$/i) && (
-                            <div className="mt-3">
-                              <img
-                                src={`http://localhost:4000/uploads/${selectedTicket.file}`}
-                                alt="Uploaded"
-                                className="img-fluid border rounded"
-                                style={{ 
-                                  maxHeight: '400px',
-                                  display: fileLoading ? 'none' : 'block'
-                                }}
-                              />
-                              {fileLoading && (
-                                <div className="text-center py-4">
-                                  <Spinner animation="border" variant="primary" />
-                                  <p>Loading image preview...</p>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </Col>
-                      </Row>
-                    )}
+      {/* VIEW FILE BUTTON */}
+      <div className="d-flex gap-2 mb-3">
+        <Button
+          variant="outline-primary"
+          size="sm"
+          onClick={() => handleViewFile(selectedTicket.file)}
+          disabled={fileLoading}
+        >
+          {fileLoading ? "Loading..." : "🔍 View File"}
+        </Button>
+      </div>
+
+      {/* ---------------- IMAGE PREVIEW ---------------- */}
+      {selectedTicket.file.match(/\.(jpeg|jpg|png|gif|bmp|webp)$/i) && (
+        <div className="mt-3">
+          <img
+            src={`https://anywhereworks-backend.onrender.com/uploads/${selectedTicket.file}`}
+            alt="Uploaded"
+            className="img-fluid border rounded"
+            style={{
+              maxHeight: "400px",
+              display: fileLoading ? "none" : "block",
+            }}
+          />
+
+          {fileLoading && (
+            <div className="text-center py-4">
+              <Spinner animation="border" variant="primary" />
+              <p>Loading image preview...</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ---------------- AUDIO PREVIEW ---------------- */}
+      {selectedTicket.file.match(/\.(mp3|wav|ogg|m4a|aac|flac)$/i) && (
+        <div className="mt-3">
+          <audio
+            controls
+            style={{ width: "100%" }}
+            src={`https://anywhereworks-backend.onrender.com/uploads/${selectedTicket.file}`}
+          >
+            Your browser does not support audio playback.
+          </audio>
+        </div>
+      )}
+
+      {/* ---------------- VIDEO PREVIEW ---------------- */}
+      {selectedTicket.file.match(/\.(mp4)$/i) && (
+        <div className="mt-3">
+          <video
+            controls
+            style={{ width: "100%", maxHeight: "400px" }}
+            src={`https://anywhereworks-backend.onrender.com/uploads/${selectedTicket.file}`}
+          />
+        </div>
+      )}
+
+      {/* ---------------- PDF PREVIEW ---------------- */}
+      {selectedTicket.file.match(/\.pdf$/i) && (
+        <div className="mt-3">
+          <Button
+            variant="outline-danger"
+            size="sm"
+            onClick={() =>
+              window.open(
+                `https://anywhereworks-backend.onrender.com/uploads/${selectedTicket.file}`,
+                "_blank"
+              )
+            }
+          >
+            📄 Open PDF
+          </Button>
+        </div>
+      )}
+
+      {/* ---------------- DOCUMENTS / ARCHIVES (DOC, XLS, ZIP, RAR) ---------------- */}
+      {selectedTicket.file.match(/\.(doc|docx|xls|xlsx|csv|txt|zip|rar)$/i) && (
+        <div className="mt-3 border p-3 rounded bg-light">
+          <p>📁 This file type cannot be previewed here.</p>
+          <a
+            className="btn btn-sm btn-secondary"
+            href={`https://anywhereworks-backend.onrender.com/uploads/${selectedTicket.file}`}
+            download
+          >
+            ⬇ Download File
+          </a>
+        </div>
+      )}
+    </Col>
+  </Row>
+)}
+
                   </>
                 )}
               </Modal.Body>

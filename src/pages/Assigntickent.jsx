@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from "react";
 import { Form, Container, Row, Col, Card, Spinner } from 'react-bootstrap';
 import { motion } from 'framer-motion';
 import axios from 'axios';
@@ -22,16 +22,18 @@ function Assigntickent() {
   });
 
   const [loading, setLoading] = useState(false);
+const fileInputRef = useRef(null);
 
  
   const assigneeOptions = [
   { name: 'Merin', gmail: 'merinjdominic@jecc.ac.in' },
   { name: 'Sandra', gmail: 'sandraps@jecc.ac.in' },
   { name: 'Deepthi', gmail: 'deepthimohan@jecc.ac.in' },
-  { name: 'Abin', gmail: 'abinjose@jecc.ac.in' },
   { name: 'Jeswin', gmail: 'jeswinjohn@jecc.ac.in' },
   { name: 'Pravitha', gmail: 'pravithacp@jecc.ac.in' },
   { name: 'Hima', gmail: 'himappradeep@jecc.ac.in' },
+    { name: 'anjiya', gmail: 'anjiyapj@gmail.com' },
+
 ];
 
 const [showModal, setShowModal] = useState(false);
@@ -90,15 +92,22 @@ const handleSubmit = async (e) => {
     const dataToSend = { ...formData, assignedDate: currentDate };
 
     const data = new FormData();
+
+    // Append normal fields
     Object.entries(dataToSend).forEach(([key, value]) => {
-      if (value) {
+      if (key !== "file" && value) {
         data.append(key, value);
       }
     });
 
-    // 🔍 Debug: print what’s being sent
+    // ✅ Append actual file object
+    if (formData.file) {
+      data.append("file", formData.file); // MUST MATCH multerConfig.single("file")
+    }
+
+    // Debug print
     for (let [key, val] of data.entries()) {
-      console.log(key, val);
+      console.log("➡️", key, val);
     }
 
     await axios.post(
@@ -107,21 +116,26 @@ const handleSubmit = async (e) => {
       { headers: { "Content-Type": "multipart/form-data" } }
     );
 
-    toast.success("✅ Ticket assigned and email sent");
+    toast.success("✅ Ticket assigned");
 
-    setFormData((prev) => ({
-      projectName: "",
-      subject: "",
-      description: "",
-      expectedHours: "",
-      ticketType: "",
-      file: null,
-      assignedTo: "",
-      assignedBy: prev.assignedBy,
-      assignedDate: "",
-    }));
+ setFormData((prev) => ({
+  ...prev,
+  projectName: "",
+  subject: "",
+  description: "",
+  expectedHours: "",
+  ticketType: "",
+  assignedTo: "",
+  file: null,
+  assignedDate: "",
+}));
+
+// Reset file input manually
+if (fileInputRef.current) {
+  fileInputRef.current.value = "";
+}
+
   } catch (err) {
-    // 🔍 Better error logging
     if (err.response) {
       console.error("📌 Backend error:", err.response.data);
       console.error("📌 Status:", err.response.status);
@@ -129,8 +143,9 @@ const handleSubmit = async (e) => {
     } else if (err.request) {
       console.error("📌 No response received:", err.request);
     } else {
-      console.error("📌 Error setting up request:", err.message);
+      console.error("📌 Error:", err.message);
     }
+
     toast.error("❌ Failed to assign ticket. Please try again.");
   } finally {
     setLoading(false);
@@ -246,11 +261,13 @@ const handleSubmit = async (e) => {
                             id: 'file',
                             label: 'Upload File',
                             control: (
-                              <Form.Control
-                                type="file"
-                                name="file"
-                                onChange={handleChange}
-                              />
+                           <Form.Control
+  type="file"
+  name="file"
+  ref={fileInputRef}
+  onChange={handleChange}
+/>
+
                             ),
                           },
                         {
