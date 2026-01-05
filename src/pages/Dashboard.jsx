@@ -5,9 +5,6 @@ import {
   Button
 } from 'react-bootstrap';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer
-} from 'recharts';
 import { 
   FiClock, FiCalendar, FiTrendingUp, FiUser, FiAlertCircle, 
   FiDownload, FiList, FiCheckCircle, FiShield
@@ -19,11 +16,8 @@ import Sidebar from '../components/Sidebar';
 const Dashboard = () => {
   const [allTickets, setAllTickets] = useState([]);
   const [filteredTickets, setFilteredTickets] = useState([]);
-  const [devStats, setDevStats] = useState({ assigned: 0, working: 0, pending: 0 });
-  const [maintStats, setMaintStats] = useState({ assigned: 0, working: 0, pending: 0 });
   const [currentPage, setCurrentPage] = useState(1);
   const [filterType, setFilterType] = useState('All');
-  const [timeRange, setTimeRange] = useState('all');
   const [ticketTypeFilter, setTicketTypeFilter] = useState('All');
   const ticketsPerPage = 10;
   const [error, setError] = useState(null);
@@ -35,17 +29,24 @@ const Dashboard = () => {
   const userRole = user?.role || 'employee';
   const userEmail = user?.email || user?.gmail;
 
-  const COLORS = {
-    assigned: '#3a0ca3',
-    working: '#f8961e',
-    pending: '#f94144',
-    completed: '#43aa8b',
-    verified: '#4cc9f0'
-  };
-
-  // Fetch all data - FAST LOADING
+  // Fetch all data - OPTIMIZED FAST LOADING
   useEffect(() => {
     const fetchData = async () => {
+      // Check if we already have data in localStorage for faster initial load
+      const cachedData = localStorage.getItem('cachedTickets');
+      if (cachedData) {
+        try {
+          const parsedData = JSON.parse(cachedData);
+          if (Array.isArray(parsedData) && parsedData.length > 0) {
+            setAllTickets(parsedData);
+            processData(parsedData);
+            // Don't set loading to false yet, we'll still fetch fresh data
+          }
+        } catch (e) {
+          console.log('Cache parse error, fetching fresh data');
+        }
+      }
+
       setIsLoading(true);
       try {
         const user = JSON.parse(localStorage.getItem('user'));
@@ -54,105 +55,79 @@ const Dashboard = () => {
         const userEmail = user.email || user.gmail;
         if (!userEmail) throw new Error('User email not found');
         
-        // Fetch all tickets data
+        // Fetch all tickets data with cancellation token
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        
         const res = await axios.get('https://anywhereworks-backend.onrender.com/getdashboardata', {
-          timeout: 5000 // 5 second timeout for faster response
+          signal: controller.signal,
+          headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          }
         });
+        
+        clearTimeout(timeoutId);
         const allTicketsData = res.data.tickets || [];
         
-        // Set all tickets (for admin export and statistics)
+        // Cache the data for faster reloads
+        localStorage.setItem('cachedTickets', JSON.stringify(allTicketsData));
+        
+        // Set all tickets
         setAllTickets(allTicketsData);
-        
-        // Separate logic for Admin vs Employee
-        let filteredData = [];
-        let devStatsData = { assigned: 0, working: 0, pending: 0 };
-        let maintStatsData = { assigned: 0, working: 0, pending: 0 };
-        
-        if (userRole === 'admin') {
-          // ========== ADMIN LOGIC ==========
-          // For TABLE VIEW: Only show Assigned, Working, Pending (NOT Completed or Verified)
-          const activeTicketsForTable = allTicketsData.filter(t => 
-            t.status === 'Assigned' || t.status === 'Working' || t.status === 'Pending'
-          );
-          
-          filteredData = activeTicketsForTable;
-          
-          // Calculate stats for development (only active tickets for charts)
-          const devTickets = activeTicketsForTable.filter(t => t.ticketType === 'Development');
-          devStatsData = {
-            assigned: devTickets.filter(t => t.status === 'Assigned').length,
-            working: devTickets.filter(t => t.status === 'Working').length,
-            pending: devTickets.filter(t => t.status === 'Pending').length
-          };
-          
-          // Calculate stats for maintenance (only active tickets for charts)
-          const maintTickets = activeTicketsForTable.filter(t => t.ticketType === 'Maintenance');
-          maintStatsData = {
-            assigned: maintTickets.filter(t => t.status === 'Assigned').length,
-            working: maintTickets.filter(t => t.status === 'Working').length,
-            pending: maintTickets.filter(t => t.status === 'Pending').length
-          };
-          
-        } else {
-          // ========== EMPLOYEE LOGIC ==========
-          const currentUserEmail = String(userEmail).toLowerCase().trim();
-          
-          // Employee: show ALL their tickets (including Completed/Verified)
-          filteredData = allTicketsData.filter(t => {
-            const assignedTo = t.assignedTo ? String(t.assignedTo).toLowerCase().trim() : '';
-            return assignedTo === currentUserEmail;
-          });
-          
-          // For employee, calculate stats from their ALL tickets
-          const devTickets = filteredData.filter(t => t.ticketType === 'Development');
-          devStatsData = {
-            assigned: devTickets.filter(t => t.status === 'Assigned').length,
-            working: devTickets.filter(t => t.status === 'Working').length,
-            pending: devTickets.filter(t => t.status === 'Pending').length
-          };
-          
-          const maintTickets = filteredData.filter(t => t.ticketType === 'Maintenance');
-          maintStatsData = {
-            assigned: maintTickets.filter(t => t.status === 'Assigned').length,
-            working: maintTickets.filter(t => t.status === 'Working').length,
-            pending: maintTickets.filter(t => t.status === 'Pending').length
-          };
-        }
-        
-        setDevStats(devStatsData);
-        setMaintStats(maintStatsData);
-        setFilteredTickets(filteredData);
+        processData(allTicketsData);
         setError(null);
+        
       } catch (err) {
-        console.error("Error fetching data:", err);
-        setError(err.message || "Failed to load data");
+        if (err.name === 'AbortError') {
+          setError('Request timeout. Please try again.');
+        } else {
+          console.error("Error fetching data:", err);
+          setError(err.message || "Failed to load data");
+        }
       } finally {
         setIsLoading(false);
       }
     };
     
+    const processData = (data) => {
+      let filteredData = [];
+      
+      if (userRole === 'admin') {
+        // ========== ADMIN LOGIC ==========
+        // For TABLE VIEW: Only show Assigned, Working, Pending (NOT Completed or Verified)
+        filteredData = data.filter(t => 
+          t.status === 'Assigned' || t.status === 'Working' || t.status === 'Pending'
+        );
+        
+      } else {
+        // ========== EMPLOYEE LOGIC ==========
+        const currentUserEmail = String(userEmail).toLowerCase().trim();
+        
+        // Employee: show ALL their tickets (including Completed/Verified)
+        filteredData = data.filter(t => {
+          const assignedTo = t.assignedTo ? String(t.assignedTo).toLowerCase().trim() : '';
+          return assignedTo === currentUserEmail;
+        });
+      }
+      
+      setFilteredTickets(filteredData);
+    };
+    
     fetchData();
   }, [userRole, userEmail]);
 
-  // Filter tickets when filters change
-  useEffect(() => {
-    if (allTickets.length === 0) return;
-    
+  // Optimized filter function
+  const applyFilters = useCallback((data) => {
     let filtered = [];
     
     if (userRole === 'admin') {
-      // ========== ADMIN FILTERING ==========
-      // Start with ONLY active tickets for table view
-      filtered = allTickets.filter(t => 
+      filtered = data.filter(t => 
         t.status === 'Assigned' || t.status === 'Working' || t.status === 'Pending'
       );
-      
     } else {
-      // ========== EMPLOYEE FILTERING ==========
       const currentUserEmail = userEmail ? String(userEmail).toLowerCase().trim() : '';
-      
-      // Employee: show ALL their tickets (including Completed/Verified)
-      filtered = allTickets.filter(t => {
+      filtered = data.filter(t => {
         const assignedTo = t.assignedTo ? String(t.assignedTo).toLowerCase().trim() : '';
         return assignedTo === currentUserEmail;
       });
@@ -163,38 +138,30 @@ const Dashboard = () => {
       filtered = filtered.filter(t => t.status === filterType);
     }
     
-    // Apply time range filter
-    const now = new Date();
-    if (timeRange === 'week') {
-      const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      filtered = filtered.filter(t => {
-        const ticketDate = new Date(t.createdAt);
-        return ticketDate > oneWeekAgo;
-      });
-    } else if (timeRange === 'month') {
-      const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-      filtered = filtered.filter(t => {
-        const ticketDate = new Date(t.createdAt);
-        return ticketDate > oneMonthAgo;
-      });
-    }
-    
     // Apply ticket type filter
     if (ticketTypeFilter !== 'All') {
       filtered = filtered.filter(t => t.ticketType === ticketTypeFilter);
     }
     
+    return filtered;
+  }, [userRole, userEmail, filterType, ticketTypeFilter]);
+
+  // Optimized filter effect
+  useEffect(() => {
+    if (allTickets.length === 0) return;
+    
+    const filtered = applyFilters(allTickets);
     setFilteredTickets(filtered);
     setCurrentPage(1);
-  }, [filterType, timeRange, ticketTypeFilter, allTickets, userRole, userEmail]);
+  }, [filterType, ticketTypeFilter, allTickets, applyFilters]);
 
   // Calculate working days
   const calculateWorkingDays = useCallback((expectedHours = 0, requestedHours = 0) => {
     const totalHours = expectedHours + requestedHours;
-    return totalHours ? Math.ceil(totalHours / 6) : 0;
+    return totalHours ? Math.ceil(totalHours / 8) : 0;
   }, []);
 
-  // Calculate statistics - DIFFERENT FOR ADMIN VS EMPLOYEE
+  // Calculate statistics - OPTIMIZED
   const statistics = useMemo(() => {
     if (allTickets.length === 0) return {
       totalTickets: 0,
@@ -212,104 +179,75 @@ const Dashboard = () => {
       myTickets: 0
     };
     
-    if (userRole === 'admin') {
-      // ========== ADMIN STATISTICS ==========
-      // Calculate from ALL tickets (including Completed/Verified)
-      const totalTickets = allTickets.length;
-      const assigned = allTickets.filter(t => t.status === 'Assigned').length;
-      const working = allTickets.filter(t => t.status === 'Working').length;
-      const completed = allTickets.filter(t => t.status === 'Completed').length;
-      const verified = allTickets.filter(t => t.status === 'Verified').length;
-      const pending = allTickets.filter(t => t.status === 'Pending').length;
-      const development = allTickets.filter(t => t.ticketType === 'Development').length;
-      const maintenance = allTickets.filter(t => t.ticketType === 'Maintenance').length;
+    const currentUserEmail = userEmail ? String(userEmail).toLowerCase().trim() : '';
+    
+    // Single pass through data
+    let stats = {
+      totalTickets: 0,
+      assigned: 0,
+      working: 0,
+      completed: 0,
+      verified: 0,
+      pending: 0,
+      development: 0,
+      maintenance: 0,
+      expectedHours: 0,
+      requestedHours: 0,
+      workingDays: 0,
+      efficiency: 0,
+      myTickets: 0
+    };
+    
+    // Filter tickets based on user role
+    const relevantTickets = userRole === 'admin' 
+      ? allTickets 
+      : allTickets.filter(t => {
+          const assignedTo = t.assignedTo ? String(t.assignedTo).toLowerCase().trim() : '';
+          return assignedTo === currentUserEmail;
+        });
+    
+    stats.totalTickets = relevantTickets.length;
+    stats.myTickets = relevantTickets.length;
+    
+    // Calculate all stats in one loop
+    relevantTickets.forEach(ticket => {
+      // Status counts
+      switch(ticket.status) {
+        case 'Assigned': stats.assigned++; break;
+        case 'Working': stats.working++; break;
+        case 'Completed': stats.completed++; break;
+        case 'Verified': stats.verified++; break;
+        case 'Pending': stats.pending++; break;
+      }
       
-      // Calculate hours from ACTIVE tickets only (for efficiency)
-      const activeTickets = allTickets.filter(t => 
-        t.status === 'Assigned' || t.status === 'Working' || t.status === 'Pending'
-      );
+      // Type counts
+      if (ticket.ticketType === 'Development') stats.development++;
+      if (ticket.ticketType === 'Maintenance') stats.maintenance++;
       
-      const expectedHours = activeTickets.reduce((sum, ticket) => sum + (ticket.expectedHours || 0), 0);
-      const requestedHours = activeTickets.reduce((sum, ticket) => {
+      // Hours (only for active tickets if admin)
+      if (userRole === 'admin') {
+        const isActive = ticket.status === 'Assigned' || ticket.status === 'Working' || ticket.status === 'Pending';
+        if (isActive) {
+          stats.expectedHours += ticket.expectedHours || 0;
+          const lastReq = ticket.timeRequests?.[0] || {};
+          stats.requestedHours += lastReq.hours || 0;
+        }
+      } else {
+        // For employees, count hours from all their tickets
+        stats.expectedHours += ticket.expectedHours || 0;
         const lastReq = ticket.timeRequests?.[0] || {};
-        return sum + (lastReq.hours || 0);
-      }, 0);
-      
-      const workingDays = calculateWorkingDays(expectedHours, requestedHours);
-      const efficiency = expectedHours > 0 
-        ? Math.min(100, Math.round((requestedHours / expectedHours) * 100))
-        : 0;
-      
-      return {
-        totalTickets,
-        assigned,
-        working,
-        completed,
-        verified,
-        pending,
-        development,
-        maintenance,
-        expectedHours,
-        requestedHours,
-        workingDays,
-        efficiency,
-        myTickets: filteredTickets.length // Active tickets for admin
-      };
-      
-    } else {
-      // ========== EMPLOYEE STATISTICS ==========
-      const currentUserEmail = userEmail ? String(userEmail).toLowerCase().trim() : '';
-      
-      // Employee: calculate from their tickets only
-      const myTickets = allTickets.filter(t => {
-        const assignedTo = t.assignedTo ? String(t.assignedTo).toLowerCase().trim() : '';
-        return assignedTo === currentUserEmail;
-      });
-      
-      const totalTickets = myTickets.length;
-      const assigned = myTickets.filter(t => t.status === 'Assigned').length;
-      const working = myTickets.filter(t => t.status === 'Working').length;
-      const completed = myTickets.filter(t => t.status === 'Completed').length;
-      const verified = myTickets.filter(t => t.status === 'Verified').length;
-      const pending = myTickets.filter(t => t.status === 'Pending').length;
-      const development = myTickets.filter(t => t.ticketType === 'Development').length;
-      const maintenance = myTickets.filter(t => t.ticketType === 'Maintenance').length;
-      
-      const expectedHours = myTickets.reduce((sum, ticket) => sum + (ticket.expectedHours || 0), 0);
-      const requestedHours = myTickets.reduce((sum, ticket) => {
-        const lastReq = ticket.timeRequests?.[0] || {};
-        return sum + (lastReq.hours || 0);
-      }, 0);
-      
-      const workingDays = calculateWorkingDays(expectedHours, requestedHours);
-      const efficiency = expectedHours > 0 
-        ? Math.min(100, Math.round((requestedHours / expectedHours) * 100))
-        : 0;
-      
-      return {
-        totalTickets,
-        assigned,
-        working,
-        completed,
-        verified,
-        pending,
-        development,
-        maintenance,
-        expectedHours,
-        requestedHours,
-        workingDays,
-        efficiency,
-        myTickets: totalTickets
-      };
-    }
-  }, [allTickets, filteredTickets, userRole, userEmail, calculateWorkingDays]);
-
-  // Prepare chart data
-  const chartData = useMemo(() => (stats = {}) => [
-    { name: 'Assigned', value: stats.assigned || 0, color: COLORS.assigned },
-    { name: 'Working', value: stats.working || 0, color: COLORS.working },
-    { name: 'Pending', value: stats.pending || 0, color: COLORS.pending }
-  ], [COLORS]);
+        stats.requestedHours += lastReq.hours || 0;
+      }
+    });
+    
+    // Calculate derived stats
+    stats.workingDays = calculateWorkingDays(stats.expectedHours, stats.requestedHours);
+    stats.efficiency = stats.expectedHours > 0 
+      ? Math.min(100, Math.round((stats.requestedHours / stats.expectedHours) * 100))
+      : 0;
+    
+    return stats;
+  }, [allTickets, userRole, userEmail, calculateWorkingDays]);
 
   // Export ALL tickets to Excel (admin only)
   const exportAllTicketsToExcel = useCallback(() => {
@@ -362,23 +300,17 @@ const Dashboard = () => {
     // Export to Excel
     XLSX.writeFile(wb, fileName);
     
-    alert(`✅ Successfully exported ${allTickets.length} tickets to Excel\n\n` +
-          `📊 Complete Breakdown:\n` +
-          `• Assigned: ${statistics.assigned}\n` +
-          `• Working: ${statistics.working}\n` +
-          `• Completed: ${statistics.completed}\n` +
-          `• Verified: ${statistics.verified}\n` +
-          `• Pending: ${statistics.pending}`);
-  }, [allTickets, calculateWorkingDays, statistics]);
+    alert(`✅ Successfully exported ${allTickets.length} tickets to Excel`);
+  }, [allTickets, calculateWorkingDays]);
 
-  // Get current page tickets
-  const currentTickets = useMemo(() => 
-    filteredTickets.slice(
-      (currentPage - 1) * ticketsPerPage,
-      currentPage * ticketsPerPage
-    ),
-    [filteredTickets, currentPage, ticketsPerPage]
-  );
+  // Get current page tickets - OPTIMIZED
+  const currentTickets = useMemo(() => {
+    if (filteredTickets.length === 0) return [];
+    
+    const start = (currentPage - 1) * ticketsPerPage;
+    const end = start + ticketsPerPage;
+    return filteredTickets.slice(start, end);
+  }, [filteredTickets, currentPage, ticketsPerPage]);
 
   const totalPages = Math.ceil(filteredTickets.length / ticketsPerPage);
 
@@ -620,47 +552,6 @@ const Dashboard = () => {
               </Col>
             </Row>
 
-            {/* Charts - DIFFERENT FOR ADMIN VS EMPLOYEE */}
-            {userRole === 'admin' ? (
-              <Row className="mb-4">
-                <Col md={6}>
-                  <ChartCard 
-                    title="Active Development Tickets" 
-                    data={chartData(devStats)}
-                    total={devStats.assigned + devStats.working + devStats.pending}
-                    subtitle="Only active tickets shown (Assigned, Working, Pending)"
-                  />
-                </Col>
-                <Col md={6}>
-                  <ChartCard 
-                    title="Active Maintenance Tickets" 
-                    data={chartData(maintStats)}
-                    total={maintStats.assigned + maintStats.working + maintStats.pending}
-                    subtitle="Only active tickets shown (Assigned, Working, Pending)"
-                  />
-                </Col>
-              </Row>
-            ) : (
-              <Row className="mb-4">
-                <Col md={6}>
-                  <ChartCard 
-                    title="My Development Tickets" 
-                    data={chartData(devStats)}
-                    total={devStats.assigned + devStats.working + devStats.pending}
-                    subtitle="Your development tickets status"
-                  />
-                </Col>
-                <Col md={6}>
-                  <ChartCard 
-                    title="My Maintenance Tickets" 
-                    data={chartData(maintStats)}
-                    total={maintStats.assigned + maintStats.working + maintStats.pending}
-                    subtitle="Your maintenance tickets status"
-                  />
-                </Col>
-              </Row>
-            )}
-
             {/* Tickets Table - DIFFERENT FOR ADMIN VS EMPLOYEE */}
             <div className="bg-white p-3 shadow rounded">
               <div className="d-flex justify-content-between align-items-center mb-3">
@@ -670,12 +561,9 @@ const Dashboard = () => {
                     <Badge bg="secondary" className="ms-2">
                       {filteredTickets.length} {userRole === 'admin' ? 'active tickets' : 'tickets'}
                     </Badge>
-                   
                   </h5>
                 </div>
                 <div className="d-flex gap-2 align-items-center">
-         
-                  
                   <Form.Select
                     size="sm"
                     style={{ width: '150px' }}
@@ -838,38 +726,6 @@ const InfoCard = React.memo(({ title, value, variant, icon, subtitle }) => (
       </div>
       {icon && <div className={`text-${variant}`}>{icon}</div>}
     </div>
-  </div>
-));
-
-const ChartCard = React.memo(({ title, data, total, subtitle }) => (
-  <div className="bg-white p-3 rounded shadow-sm h-100">
-    <div className="d-flex justify-content-between align-items-center mb-3">
-      <h6 className="mb-0">{title}</h6>
-      {total !== undefined && (
-        <Badge bg="secondary">Total: {total}</Badge>
-      )}
-    </div>
-    {subtitle && <p className="text-muted small mb-3">{subtitle}</p>}
-    <ResponsiveContainer width="100%" height={250}>
-      <PieChart>
-        <Pie
-          data={data}
-          cx="50%"
-          cy="50%"
-          innerRadius={60}
-          outerRadius={80}
-          paddingAngle={2}
-          label={({ name, value }) => `${name}: ${value}`}
-          dataKey="value"
-        >
-          {data.map((entry, i) => (
-            <Cell key={i} fill={entry.color} />
-          ))}
-        </Pie>
-        <Tooltip formatter={(value) => [value, 'Tickets']} />
-        <Legend />
-      </PieChart>
-    </ResponsiveContainer>
   </div>
 ));
 
