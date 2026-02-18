@@ -84,6 +84,17 @@ function Sidebar({ notCompletedCount }) {
                   <i className="bi  me-2" /> Renewal Dates
                 </Link>
               </li>
+              <li className="ms-2 mt-3">
+  <Link
+    to="/amcrenewal"
+    style={{ backgroundColor: "white", border: "2px solid black", color: "black" }}
+    className="nav-link fs-6"
+  >
+    <i className="bi bi-calendar-check me-2" /> AMC / Renewal AMC
+  </Link>
+</li>
+
+              
             </>
           )}
 
