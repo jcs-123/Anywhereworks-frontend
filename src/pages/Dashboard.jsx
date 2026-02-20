@@ -2,16 +2,28 @@ import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import axios from 'axios';
 import {
   Row, Col, Table, Pagination, Badge, Form, Alert, Card,
-  Button
+  Button, OverlayTrigger, Tooltip
 } from 'react-bootstrap';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FiClock, FiCalendar, FiTrendingUp, FiUser, FiAlertCircle, 
-  FiDownload, FiList, FiCheckCircle, FiShield
+  FiDownload, FiList, FiCheckCircle, FiShield, FiFilter,
+  FiUsers, FiPieChart
 } from 'react-icons/fi';
 import * as XLSX from 'xlsx';
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
+
+// Developer options for filtering
+const developerOptions = [
+  { name: 'Merin', gmail: 'merinjdominic@jecc.ac.in' },
+  { name: 'Sandra', gmail: 'sandraps@jecc.ac.in' },
+  { name: 'Deepthi', gmail: 'deepthimohan@jecc.ac.in' },
+  { name: 'Jeswin', gmail: 'jeswinjohn@jecc.ac.in' },
+  { name: 'Pravitha', gmail: 'pravithacp@jecc.ac.in' },
+  { name: 'Hima', gmail: 'himappradeep@jecc.ac.in' },
+  { name: 'anjiya', gmail: 'anjiyapj@gmail.com' },
+];
 
 const Dashboard = () => {
   const [allTickets, setAllTickets] = useState([]);
@@ -19,9 +31,11 @@ const Dashboard = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [filterType, setFilterType] = useState('All');
   const [ticketTypeFilter, setTicketTypeFilter] = useState('All');
+  const [developerFilter, setDeveloperFilter] = useState('All');
   const ticketsPerPage = 10;
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [developerStats, setDeveloperStats] = useState({});
 
   // Get user from localStorage
   const user = JSON.parse(localStorage.getItem('user'));
@@ -40,7 +54,7 @@ const Dashboard = () => {
           if (Array.isArray(parsedData) && parsedData.length > 0) {
             setAllTickets(parsedData);
             processData(parsedData);
-            // Don't set loading to false yet, we'll still fetch fresh data
+            calculateDeveloperStats(parsedData);
           }
         } catch (e) {
           console.log('Cache parse error, fetching fresh data');
@@ -57,7 +71,7 @@ const Dashboard = () => {
         
         // Fetch all tickets data with cancellation token
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
         
         const res = await axios.get('https://anywhereworks-backend.onrender.com/getdashboardata', {
           signal: controller.signal,
@@ -75,6 +89,7 @@ const Dashboard = () => {
         
         // Set all tickets
         setAllTickets(allTicketsData);
+        calculateDeveloperStats(allTicketsData);
         processData(allTicketsData);
         setError(null);
         
@@ -94,17 +109,21 @@ const Dashboard = () => {
       let filteredData = [];
       
       if (userRole === 'admin') {
-        // ========== ADMIN LOGIC ==========
-        // For TABLE VIEW: Only show Assigned, Working, Pending (NOT Completed or Verified)
+        // ADMIN: Show Assigned, Working, Pending
         filteredData = data.filter(t => 
           t.status === 'Assigned' || t.status === 'Working' || t.status === 'Pending'
         );
         
-      } else {
-        // ========== EMPLOYEE LOGIC ==========
-        const currentUserEmail = String(userEmail).toLowerCase().trim();
+        // Apply developer filter if selected
+        if (developerFilter !== 'All') {
+          filteredData = filteredData.filter(t => 
+            t.assignedTo?.toLowerCase() === developerFilter.toLowerCase()
+          );
+        }
         
-        // Employee: show ALL their tickets (including Completed/Verified)
+      } else {
+        // EMPLOYEE: Show their tickets
+        const currentUserEmail = String(userEmail).toLowerCase().trim();
         filteredData = data.filter(t => {
           const assignedTo = t.assignedTo ? String(t.assignedTo).toLowerCase().trim() : '';
           return assignedTo === currentUserEmail;
@@ -115,16 +134,77 @@ const Dashboard = () => {
     };
     
     fetchData();
-  }, [userRole, userEmail]);
+  }, [userRole, userEmail, developerFilter]);
+
+  // Calculate developer statistics
+  const calculateDeveloperStats = (tickets) => {
+    const stats = {};
+    
+    // Initialize stats for all developers
+    developerOptions.forEach(dev => {
+      stats[dev.name] = {
+        total: 0,
+        assigned: 0,
+        working: 0,
+        completed: 0,
+        verified: 0,
+        pending: 0,
+        hours: 0,
+        email: dev.gmail
+      };
+    });
+    
+    // Calculate stats from tickets
+    tickets.forEach(ticket => {
+      const assignedEmail = ticket.assignedTo;
+      if (!assignedEmail) return;
+      
+      const developer = developerOptions.find(d => d.gmail === assignedEmail);
+      if (!developer) return;
+      
+      const devName = developer.name;
+      
+      // Update counts
+      stats[devName].total++;
+      stats[devName].hours += ticket.expectedHours || 0;
+      
+      // Update by status
+      switch(ticket.status) {
+        case 'Assigned': stats[devName].assigned++; break;
+        case 'Working': stats[devName].working++; break;
+        case 'Completed': stats[devName].completed++; break;
+        case 'Verified': stats[devName].verified++; break;
+        case 'Pending': stats[devName].pending++; break;
+        default: break;
+      }
+    });
+    
+    setDeveloperStats(stats);
+  };
+
+  // Get developer name from email
+  const getDeveloperName = useCallback((email) => {
+    if (!email) return 'Unassigned';
+    const developer = developerOptions.find(d => d.gmail === email);
+    return developer?.name || email.split('@')[0] || email;
+  }, []);
 
   // Optimized filter function
   const applyFilters = useCallback((data) => {
     let filtered = [];
     
     if (userRole === 'admin') {
+      // Base filter for admin: active tickets
       filtered = data.filter(t => 
         t.status === 'Assigned' || t.status === 'Working' || t.status === 'Pending'
       );
+      
+      // Apply developer filter
+      if (developerFilter !== 'All') {
+        filtered = filtered.filter(t => 
+          t.assignedTo?.toLowerCase() === developerFilter.toLowerCase()
+        );
+      }
     } else {
       const currentUserEmail = userEmail ? String(userEmail).toLowerCase().trim() : '';
       filtered = data.filter(t => {
@@ -144,7 +224,7 @@ const Dashboard = () => {
     }
     
     return filtered;
-  }, [userRole, userEmail, filterType, ticketTypeFilter]);
+  }, [userRole, userEmail, filterType, ticketTypeFilter, developerFilter]);
 
   // Optimized filter effect
   useEffect(() => {
@@ -153,7 +233,7 @@ const Dashboard = () => {
     const filtered = applyFilters(allTickets);
     setFilteredTickets(filtered);
     setCurrentPage(1);
-  }, [filterType, ticketTypeFilter, allTickets, applyFilters]);
+  }, [filterType, ticketTypeFilter, developerFilter, allTickets, applyFilters]);
 
   // Calculate working days
   const calculateWorkingDays = useCallback((expectedHours = 0, requestedHours = 0) => {
@@ -161,7 +241,7 @@ const Dashboard = () => {
     return totalHours ? Math.ceil(totalHours / 8) : 0;
   }, []);
 
-  // Calculate statistics - OPTIMIZED
+  // Calculate statistics
   const statistics = useMemo(() => {
     if (allTickets.length === 0) return {
       totalTickets: 0,
@@ -181,7 +261,6 @@ const Dashboard = () => {
     
     const currentUserEmail = userEmail ? String(userEmail).toLowerCase().trim() : '';
     
-    // Single pass through data
     let stats = {
       totalTickets: 0,
       assigned: 0,
@@ -198,7 +277,6 @@ const Dashboard = () => {
       myTickets: 0
     };
     
-    // Filter tickets based on user role
     const relevantTickets = userRole === 'admin' 
       ? allTickets 
       : allTickets.filter(t => {
@@ -209,9 +287,7 @@ const Dashboard = () => {
     stats.totalTickets = relevantTickets.length;
     stats.myTickets = relevantTickets.length;
     
-    // Calculate all stats in one loop
     relevantTickets.forEach(ticket => {
-      // Status counts
       switch(ticket.status) {
         case 'Assigned': stats.assigned++; break;
         case 'Working': stats.working++; break;
@@ -220,11 +296,9 @@ const Dashboard = () => {
         case 'Pending': stats.pending++; break;
       }
       
-      // Type counts
       if (ticket.ticketType === 'Development') stats.development++;
       if (ticket.ticketType === 'Maintenance') stats.maintenance++;
       
-      // Hours (only for active tickets if admin)
       if (userRole === 'admin') {
         const isActive = ticket.status === 'Assigned' || ticket.status === 'Working' || ticket.status === 'Pending';
         if (isActive) {
@@ -233,14 +307,12 @@ const Dashboard = () => {
           stats.requestedHours += lastReq.hours || 0;
         }
       } else {
-        // For employees, count hours from all their tickets
         stats.expectedHours += ticket.expectedHours || 0;
         const lastReq = ticket.timeRequests?.[0] || {};
         stats.requestedHours += lastReq.hours || 0;
       }
     });
     
-    // Calculate derived stats
     stats.workingDays = calculateWorkingDays(stats.expectedHours, stats.requestedHours);
     stats.efficiency = stats.expectedHours > 0 
       ? Math.min(100, Math.round((stats.requestedHours / stats.expectedHours) * 100))
@@ -249,22 +321,22 @@ const Dashboard = () => {
     return stats;
   }, [allTickets, userRole, userEmail, calculateWorkingDays]);
 
-  // Export ALL tickets to Excel (admin only)
+  // Export ALL tickets to Excel
   const exportAllTicketsToExcel = useCallback(() => {
     if (allTickets.length === 0) {
       alert('No tickets to export');
       return;
     }
     
-    // Prepare data for export - includes ALL tickets
     const formattedData = allTickets.map(ticket => {
       const lastReq = ticket.timeRequests?.[0] || {};
       const daysWorked = calculateWorkingDays(ticket.expectedHours || 0, lastReq.hours || 0);
+      const developerName = getDeveloperName(ticket.assignedTo);
       
       return {
         'Ticket No': ticket.ticketNo || '',
         'Status': ticket.status || '',
-        'Assigned To': ticket.assignedTo || '',
+        'Assigned To': developerName,
         'Type': ticket.ticketType || '',
         'Project': ticket.projectName || '',
         'Subject': ticket.subject || '',
@@ -280,12 +352,10 @@ const Dashboard = () => {
       };
     });
 
-    // Create worksheet
     const ws = XLSX.utils.json_to_sheet(formattedData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "All Tickets");
     
-    // Auto-size columns
     const wscols = [
       {wch: 12}, {wch: 12}, {wch: 20}, {wch: 15}, {wch: 20},
       {wch: 30}, {wch: 10}, {wch: 15}, {wch: 15}, {wch: 12},
@@ -293,20 +363,16 @@ const Dashboard = () => {
     ];
     ws['!cols'] = wscols;
 
-    // Generate file name with timestamp
     const timestamp = new Date().toISOString().split('T')[0];
     const fileName = `All_Tickets_Export_${timestamp}.xlsx`;
     
-    // Export to Excel
     XLSX.writeFile(wb, fileName);
-    
     alert(`✅ Successfully exported ${allTickets.length} tickets to Excel`);
-  }, [allTickets, calculateWorkingDays]);
+  }, [allTickets, calculateWorkingDays, getDeveloperName]);
 
-  // Get current page tickets - OPTIMIZED
+  // Get current page tickets
   const currentTickets = useMemo(() => {
     if (filteredTickets.length === 0) return [];
-    
     const start = (currentPage - 1) * ticketsPerPage;
     const end = start + ticketsPerPage;
     return filteredTickets.slice(start, end);
@@ -358,6 +424,84 @@ const Dashboard = () => {
         <Pagination.Next onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages} />
         <Pagination.Last onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages} />
       </Pagination>
+    );
+  };
+
+  // Render developer filter for admin
+  const renderDeveloperFilter = () => {
+    if (userRole !== 'admin') return null;
+    
+    return (
+      <Form.Select
+        size="sm"
+        style={{ width: '180px' }}
+        value={developerFilter}
+        onChange={(e) => setDeveloperFilter(e.target.value)}
+      >
+        <option value="All">All Developers</option>
+        {developerOptions.map(dev => (
+          <option key={dev.gmail} value={dev.gmail}>{dev.name}</option>
+        ))}
+      </Form.Select>
+    );
+  };
+
+  // Render developer stats cards
+  const renderDeveloperStats = () => {
+    if (userRole !== 'admin' || Object.keys(developerStats).length === 0) return null;
+    
+    return (
+      <Row className="mb-4 g-2">
+        <Col xs={12}>
+          <Card className="shadow-sm border-0 bg-light">
+            <Card.Body>
+              <div className="d-flex align-items-center mb-3">
+                <FiUsers size={20} className="text-primary me-2" />
+                <h6 className="mb-0 fw-bold">Developer Performance Overview</h6>
+              </div>
+              <Row className="g-2">
+                {Object.entries(developerStats).map(([name, stats]) => (
+                  <Col md={3} key={name}>
+                    <OverlayTrigger
+                      placement="top"
+                      overlay={
+                        <Tooltip>
+                          <div>
+                            <strong>{name}</strong><br/>
+                            Total: {stats.total} tickets<br/>
+                            Hours: {stats.hours.toFixed(1)}<br/>
+                            Assigned: {stats.assigned} | Working: {stats.working}<br/>
+                            Completed: {stats.completed} | Verified: {stats.verified}<br/>
+                            Pending: {stats.pending}
+                          </div>
+                        </Tooltip>
+                      }
+                    >
+                      <div className="bg-white p-2 rounded shadow-sm" style={{ cursor: 'pointer' }}>
+                        <div className="d-flex justify-content-between align-items-center">
+                          <strong className="text-primary small">{name}</strong>
+                          <Badge bg="secondary" pill>{stats.total}</Badge>
+                        </div>
+                        <div className="d-flex gap-1 mt-1 small flex-wrap">
+                          <Badge bg="primary" pill>{stats.assigned}</Badge>
+                          <Badge bg="warning" pill>{stats.working}</Badge>
+                          <Badge bg="success" pill>{stats.completed}</Badge>
+                          <Badge bg="info" pill>{stats.verified}</Badge>
+                          <Badge bg="danger" pill>{stats.pending}</Badge>
+                        </div>
+                        <div className="text-muted small">
+                          <FiClock size={10} className="me-1" />
+                          {stats.hours.toFixed(1)} hrs
+                        </div>
+                      </div>
+                    </OverlayTrigger>
+                  </Col>
+                ))}
+              </Row>
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
     );
   };
 
@@ -416,14 +560,17 @@ const Dashboard = () => {
                       className="d-flex align-items-center gap-2"
                     >
                       <FiDownload size={18} />
-                      Export All Tickets to Excel
+                      Export All Tickets
                     </Button>
                   )}
                 </Card.Body>
               </Card>
             </div>
 
-            {/* Stats Row 1 - DIFFERENT FOR ADMIN VS EMPLOYEE */}
+            {/* Developer Stats Cards - Only for Admin */}
+            {renderDeveloperStats()}
+
+            {/* Stats Row 1 */}
             <Row className="mb-4 g-3">
               <Col md={2}>
                 <InfoCard 
@@ -481,7 +628,7 @@ const Dashboard = () => {
               </Col>
             </Row>
 
-            {/* Stats Row 2 - Ticket Types and Hours */}
+            {/* Stats Row 2 */}
             <Row className="mb-4 g-3">
               <Col md={3}>
                 <InfoCard 
@@ -552,9 +699,9 @@ const Dashboard = () => {
               </Col>
             </Row>
 
-            {/* Tickets Table - DIFFERENT FOR ADMIN VS EMPLOYEE */}
+            {/* Tickets Table */}
             <div className="bg-white p-3 shadow rounded">
-              <div className="d-flex justify-content-between align-items-center mb-3">
+              <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                 <div>
                   <h5 className="mb-0">
                     {userRole === 'admin' ? 'Active System Tickets' : 'My Tickets'} 
@@ -563,7 +710,11 @@ const Dashboard = () => {
                     </Badge>
                   </h5>
                 </div>
-                <div className="d-flex gap-2 align-items-center">
+                <div className="d-flex gap-2 align-items-center flex-wrap">
+                  {/* Developer Filter - Only for Admin */}
+                  {renderDeveloperFilter()}
+                  
+                  {/* Status Filter */}
                   <Form.Select
                     size="sm"
                     style={{ width: '150px' }}
@@ -582,6 +733,7 @@ const Dashboard = () => {
                     <option value="Pending">Pending</option>
                   </Form.Select>
                   
+                  {/* Ticket Type Filter - Only for Admin */}
                   {userRole === 'admin' && (
                     <Form.Select
                       size="sm"
@@ -626,6 +778,7 @@ const Dashboard = () => {
                         currentTickets.map((t, i) => {
                           const lastReq = t.timeRequests?.[0] || {};
                           const daysWorked = calculateWorkingDays(t.expectedHours || 0, lastReq.hours || 0);
+                          const developerName = getDeveloperName(t.assignedTo);
                           
                           return (
                             <motion.tr
@@ -637,14 +790,34 @@ const Dashboard = () => {
                             >
                               <td className="fw-bold">{t.ticketNo}</td>
                               <td>{getStatusBadge(t.status)}</td>
-                              {userRole === 'admin' && <td>{t.assignedTo || 'Unassigned'}</td>}
+                              {userRole === 'admin' && (
+                                <td>
+                                  <OverlayTrigger
+                                    placement="top"
+                                    overlay={<Tooltip>{t.assignedTo || 'Unassigned'}</Tooltip>}
+                                  >
+                                    <Badge bg="info" pill style={{ cursor: 'pointer' }}>
+                                      {developerName}
+                                    </Badge>
+                                  </OverlayTrigger>
+                                </td>
+                              )}
                               <td>
                                 <Badge bg={t.ticketType === 'Development' ? 'info' : 'success'}>
                                   {t.ticketType || '-'}
                                 </Badge>
                               </td>
                               <td>{t.projectName || '-'}</td>
-                              <td>{t.subject || '-'}</td>
+                              <td>
+                                <OverlayTrigger
+                                  placement="top"
+                                  overlay={<Tooltip>{t.subject}</Tooltip>}
+                                >
+                                  <span style={{ cursor: 'help' }}>
+                                    {t.subject?.length > 20 ? t.subject.substring(0, 20) + '...' : t.subject || '-'}
+                                  </span>
+                                </OverlayTrigger>
+                              </td>
                               <td>
                                 <Badge bg={
                                   t.priority === 'High' ? 'danger' : 

@@ -15,6 +15,7 @@ import ReportModule from './pages/ReportModule';
 import Report from './pages/Report';
 import Renewaldates from './pages/Renewaldates';
 import Amcrenewal from './pages/Amcrenewal';
+import EfinReport from './pages/EfinReport';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -100,6 +101,10 @@ function App() {
          <Route
         path="/amcrenewal"
         element={isLoggedIn ? <Amcrenewal/>: <Navigate to="/login" />}
+      />
+           <Route
+        path="/efin-report"
+        element={isLoggedIn ? <EfinReport/>: <Navigate to="/login" />}
       />
       {/* Fallback Route (Optional) */}
       <Route

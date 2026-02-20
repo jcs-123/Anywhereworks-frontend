@@ -93,6 +93,21 @@ function Sidebar({ notCompletedCount }) {
     <i className="bi bi-calendar-check me-2" /> AMC / Renewal AMC
   </Link>
 </li>
+<li className="ms-2 mt-3">
+  <Link
+    to="/efin-report"
+    className="nav-link fs-6"
+    style={{
+      backgroundColor: "white",
+      border: "2px solid #198754",
+      color: "#198754",
+      borderRadius: "6px"
+    }}
+  >
+    <i className="bi bi-file-earmark-bar-graph me-2" />
+    Efin Report
+  </Link>
+</li>
 
               
             </>
